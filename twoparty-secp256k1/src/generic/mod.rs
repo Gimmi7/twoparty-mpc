@@ -20,7 +20,7 @@ pub struct Secp256k1KeyPair {
 
 pub fn generate_keypair_with_dlog_proof() -> (DLogProof<Secp256k1, ChosenHash>, Secp256k1KeyPair) {
     let secret_share = Scalar::<Secp256k1>::random();
-    let base = Point::generator();
+    let base = Point::<Secp256k1>::generator();
     let public_share = base * &secret_share;
     let d_log_proof = DLogProof::prove(&secret_share);
     let keypair = Secp256k1KeyPair {
