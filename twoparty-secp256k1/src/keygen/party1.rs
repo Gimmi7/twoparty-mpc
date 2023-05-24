@@ -1,72 +1,25 @@
-use curv::arithmetic::{Converter, Samplable};
 use curv::BigInt;
-use curv::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use curv::cryptographic_primitives::commitments::traits::Commitment;
 use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
-use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
 use common::errors::TwoPartyError;
-use crate::ChosenHash;
-use crate::keygen::{Secp256k1KeyPair, SECURITY_BITS};
+use crate::generic::{self, DLogCommitment, DLogWitness, Secp256k1KeyPair};
+use crate::generic::share::{Party1Private, Party1Public, Party1Share};
 use crate::keygen::correct_encrypt_secret::{CorrectEncryptSecretProof, CorrectEncryptSecretStatement};
 use crate::keygen::party2::Party2KeyGenMsg1;
-use crate::keygen::share::{Party1Private, Party1Public, Party1Share};
 
 
-#[derive(Serialize, Deserialize, Clone, Debug, )]
-pub struct CommWitness {
-    pub pk_commitment_blind_factor: BigInt,
-    pub zk_pok_blind_factor: BigInt,
-    pub d_log_proof: DLogProof<Secp256k1, ChosenHash>,
-}
+pub type Party1KeyGenMsg1 = DLogCommitment;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Party1KeyGenMsg1 {
-    // hash(public_share, pk_commitment_blind_factor)
-    pub pk_commitment: BigInt,
-    // hash( R, zk_pok_blind_factor)
-    pub zk_pok_commitment: BigInt,
-}
 
 /// party1_step1: generate public_share commitment
-pub fn party1_step1() -> (Party1KeyGenMsg1, CommWitness, Secp256k1KeyPair) {
-    let secret_share = Scalar::<Secp256k1>::random();
-
-    let d_log_proof = DLogProof::<Secp256k1, ChosenHash>::prove(&secret_share);
-    let public_share = d_log_proof.pk.clone();
-
-
-    let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
-    let pk_commitment =
-        HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-            &BigInt::from_bytes(public_share.to_bytes(true).as_ref()),
-            &pk_commitment_blind_factor,
-        );
-
-    let zk_pok_blind_factor = BigInt::sample(SECURITY_BITS);
-    let zk_pok_commitment =
-        HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-            &BigInt::from_bytes(d_log_proof.pk_t_rand_commitment.to_bytes(true).as_ref()),
-            &zk_pok_blind_factor,
-        );
-
-    let ec_key_pair = Secp256k1KeyPair {
-        public: public_share,
-        secret: secret_share,
-    };
+pub fn party1_step1() -> (Party1KeyGenMsg1, DLogWitness, Secp256k1KeyPair) {
+    let (d_log_witness, d_log_commitment, keypair) = generic::generate_keypair_with_blind_dlog_proof();
     (
-        Party1KeyGenMsg1 {
-            pk_commitment,
-            zk_pok_commitment,
-        },
-        CommWitness {
-            pk_commitment_blind_factor,
-            zk_pok_blind_factor,
-            d_log_proof,
-        },
-        ec_key_pair
+        d_log_commitment,
+        d_log_witness,
+        keypair
     )
 }
 
@@ -74,7 +27,7 @@ pub fn party1_step1() -> (Party1KeyGenMsg1, CommWitness, Secp256k1KeyPair) {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1KeygenMsg2 {
-    pub comm_witness: CommWitness,
+    pub d_log_witness: DLogWitness,
     pub paillier_ek: EncryptionKey,
     pub encrypted_x1: BigInt,
     pub correct_paillier_key_proof: NiCorrectKeyProof,
@@ -83,7 +36,7 @@ pub struct Party1KeygenMsg2 {
 
 /// init paillier keypair,  homomorphism encrypt x1 , proof paillier keypair generate correctly,
 /// comm_witness was generate and stored by party1 at step1
-pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, comm_witness: CommWitness, secp256k1_keypair: Secp256k1KeyPair) -> Result<(Party1KeygenMsg2, Party1Share), TwoPartyError> {
+pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWitness, secp256k1_keypair: Secp256k1KeyPair) -> Result<(Party1KeygenMsg2, Party1Share), TwoPartyError> {
     let mut error = TwoPartyError {
         party: 1,
         action: "keygen".to_string(),
@@ -92,8 +45,8 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, comm_witness: CommWitn
     };
 
     // verify peer's public_share is not zero
-    let party2_public_share = &party2_keygen_msg1.d_log_proof.pk;
-    if party2_public_share.is_zero() {
+    let peer_public_share = &party2_keygen_msg1.d_log_proof.pk;
+    if peer_public_share.is_zero() {
         error.reason = "peer's public_share is zero".to_string();
         return Err(error);
     }
@@ -120,7 +73,7 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, comm_witness: CommWitn
     let statement = CorrectEncryptSecretStatement {
         paillier_ek: ek.clone(),
         c: encrypted_x1.clone(),
-        Q: comm_witness.d_log_proof.pk.clone(),
+        Q: d_log_witness.d_log_proof.pk.clone(),
     };
     let correct_encrypt_secret_proof = CorrectEncryptSecretProof::prove(
         &secp256k1_keypair.secret.to_bigint(),
@@ -134,9 +87,11 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, comm_witness: CommWitn
         r_encrypting_x1,
         paillier_dk: dk,
     };
+    let pub_key = &party1_private.x1 * peer_public_share;
     let party1_public = Party1Public {
         public_share: secp256k1_keypair.public,
         paillier_ek: ek.clone(),
+        pub_key,
     };
     let party1_share = Party1Share {
         public: party1_public,
@@ -144,7 +99,7 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, comm_witness: CommWitn
     };
 
     let party1_keygen_msg2 = Party1KeygenMsg2 {
-        comm_witness,
+        d_log_witness,
         paillier_ek: ek,
         encrypted_x1,
         correct_paillier_key_proof,

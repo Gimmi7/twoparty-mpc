@@ -15,6 +15,7 @@ pub struct Party1Private {
 pub struct Party1Public {
     pub public_share: Point<Secp256k1>,
     pub paillier_ek: EncryptionKey,
+    pub pub_key: Point<Secp256k1>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,6 +32,7 @@ pub struct Party2Public {
     pub public_share: Point<Secp256k1>,
     pub encrypted_x1: BigInt,
     pub paillier_ek: EncryptionKey,
+    pub pub_key: Point<Secp256k1>,
 }
 
 #[derive(Serialize, Deserialize)]
