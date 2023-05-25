@@ -83,7 +83,7 @@ pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_hash: &B
         println!("{}", party1_result3.err().unwrap());
         panic!("")
     }
-    let sig = party1_result3.unwrap();
+    
 
-    sig
+    party1_result3.unwrap()
 }

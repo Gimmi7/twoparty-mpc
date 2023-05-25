@@ -65,6 +65,22 @@ fn test_sign() {
     println!("sig={:?}", sig)
 }
 
+#[test]
+pub fn sign_for_recovery() {
+    let (share1, share2) = tests::full_keygen();
+    let x1 = &share1.private.x1;
+    let x2 = &share2.private.x2;
+    let x = (x1 * x2).to_bigint();
+
+    let digest = BigInt::from(1234);
+    let sig = tests::sign_message(&share1, &share2, &digest);
+    println!("x={}", x);
+    println!("digest={}", digest);
+    println!("r={}", &sig.r);
+    println!("s={}", &sig.s);
+    println!("v={}", &sig.v);
+}
+
 
 #[test]
 pub fn test_mod_floor() {

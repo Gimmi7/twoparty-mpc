@@ -84,15 +84,15 @@ pub fn party2_step2(
         error.reason = "the bit length of paillier n less than 2047".to_string();
         return Err(error);
     }
-    let result = party1_rotate_msg2.correct_paillier_key_proof.verify(&paillier_ek, SALT_STRING);
+    let result = party1_rotate_msg2.correct_paillier_key_proof.verify(paillier_ek, SALT_STRING);
     if result.is_err() {
         error.reason = "fail to verify paillier correct key proof".to_string();
         return Err(error);
     }
 
     // verify d_log_proof of new x1
-    let x1_G_proof = &party1_rotate_msg2.x1_G_proof;
-    let result = DLogProof::verify(&x1_G_proof);
+    let new_x1_proof = &party1_rotate_msg2.new_x1_proof;
+    let result = DLogProof::verify(new_x1_proof);
     if result.is_err() {
         error.reason = "fail to verify d_log_proof for new x1".to_string();
         return Err(error);
@@ -103,7 +103,7 @@ pub fn party2_step2(
     let statement = CorrectEncryptSecretStatement {
         paillier_ek: paillier_ek.clone(),
         c: encrypted_x1.clone(),
-        Q: x1_G_proof.pk.clone(),
+        Q: new_x1_proof.pk.clone(),
     };
     let result = party1_rotate_msg2.correct_encrypt_secret_proof.verify(&statement);
     if result.is_err() {
@@ -119,12 +119,8 @@ pub fn party2_step2(
     let x2_new = &old_share.private.x2 * factor_inv;
 
     // check if the new pub_key is the same as old
-    let pub_new = &x2_new * &x1_G_proof.pk;
-    let pub_x = pub_new.x_coord().unwrap();
-    let pub_y = pub_new.y_coord().unwrap();
-    if pub_x != old_share.public.pub_key.x_coord().unwrap()
-        && pub_y != old_share.public.pub_key.y_coord().unwrap()
-    {
+    let pub_new = &x2_new * &new_x1_proof.pk;
+    if pub_new != old_share.public.pub_key {
         error.reason = "new public key is not the same as old".to_string();
         return Err(error);
     }

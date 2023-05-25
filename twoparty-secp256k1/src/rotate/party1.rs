@@ -30,7 +30,7 @@ pub struct Party1RotateMsg2 {
     pub encrypted_x1: BigInt,
     pub correct_paillier_key_proof: NiCorrectKeyProof,
     pub correct_encrypt_secret_proof: CorrectEncryptSecretProof,
-    pub x1_G_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub new_x1_proof: DLogProof<Secp256k1, ChosenHash>,
 }
 
 pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DLogWitness, seed_keypair: Secp256k1KeyPair, old_share: &Party1Share) -> Result<(Party1RotateMsg2, Party1Share), TwoPartyError> {
@@ -62,8 +62,8 @@ pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DL
     let x1_new = &old_share.private.x1 * factor_fe;
 
     // d_log_proof for new x1
-    let x1_G_proof = DLogProof::prove(&x1_new);
-    let x1_G = &x1_G_proof.pk;
+    let new_x1_proof = DLogProof::prove(&x1_new);
+    let x1_G = &new_x1_proof.pk;
 
     // party1 init new paillier keypair
     let (ek, dk) = Paillier::keypair().keys();
@@ -111,7 +111,7 @@ pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DL
         encrypted_x1: encrypted_x1_new,
         correct_paillier_key_proof,
         correct_encrypt_secret_proof,
-        x1_G_proof,
+        new_x1_proof,
     };
 
     Ok((party1_rotate_msg2, new_share))

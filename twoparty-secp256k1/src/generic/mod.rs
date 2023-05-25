@@ -1,4 +1,5 @@
 pub mod share;
+pub mod challenge_dlog;
 
 use curv::arithmetic::{Converter, Samplable};
 use curv::BigInt;

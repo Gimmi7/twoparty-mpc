@@ -3,7 +3,7 @@
 members = [
     "twoparty-common",
     "twoparty-secp256k1",
-    "twoparty-eddsa",
+    "twoparty-ed25519",
 ]
 
 [workspace.dependencies]
