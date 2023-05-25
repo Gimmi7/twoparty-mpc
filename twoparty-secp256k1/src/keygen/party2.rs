@@ -6,7 +6,7 @@ use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::Secp256k1;
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::{SALT_STRING};
-use common::errors::TwoPartyError;
+use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::ChosenHash;
 use crate::generic::{self, Secp256k1KeyPair};
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
@@ -33,6 +33,7 @@ pub fn party2_step1() -> (Party2KeyGenMsg1, Secp256k1KeyPair) {
 // party1_keygen_msg1 was stored by party2 before party2_step1
 pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Party1KeyGenMsg1, secp256k1_keypair: Secp256k1KeyPair) -> Result<Party2Share, TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
         action: "keygen".to_string(),
         step: 2,
@@ -96,7 +97,7 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     };
     let result = party1_keygen_msg2.correct_encrypt_secret_proof.verify(&statement);
     if result.is_err() {
-        error.reason = "fail to verify correct_encrypt_x1 proof".to_string();
+        error.reason = result.err().unwrap();
         return Err(error);
     }
 
@@ -106,7 +107,6 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     };
     let pub_key = &party2_private.x2 * peer_public_share;
     let party2_public = Party2Public {
-        public_share: secp256k1_keypair.public,
         encrypted_x1,
         paillier_ek,
         pub_key,

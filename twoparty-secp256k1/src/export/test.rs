@@ -1,3 +1,4 @@
+use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use crate::tests;
 use crate::export;
 
@@ -31,5 +32,13 @@ fn test_export() {
         println!("export success, x={}", x)
     } else {
         panic!("x={}, export_x={}", x, export_x)
+    }
+
+    let G = Point::<Secp256k1>::generator();
+    let Q = Scalar::<Secp256k1>::from(x) * G;
+    if Q.x_coord().unwrap() == share1.public.pub_key.x_coord().unwrap() {
+        println!("x * G == pub_key")
+    } else {
+        panic!("x * G != pub_key")
     }
 }

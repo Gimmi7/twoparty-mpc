@@ -3,7 +3,7 @@ use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{Encrypt, Paillier, RawPlaintext};
 use serde::{Deserialize, Serialize};
-use common::errors::TwoPartyError;
+use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::export::party1::Party1ExportMsg1;
 use crate::generic::share::Party2Share;
 
@@ -14,6 +14,7 @@ pub struct Party2ExportMsg1 {
 
 pub fn party2_step1(party1_export_msg1: Party1ExportMsg1, share: &Party2Share) -> Result<Party2ExportMsg1, TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
         action: "export".to_string(),
         step: 1,

@@ -6,7 +6,7 @@ use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{Add, Encrypt, Mul, Paillier, RawCiphertext, RawPlaintext};
 use serde::{Deserialize, Serialize};
-use common::errors::TwoPartyError;
+use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::{ChosenHash, generic};
 use crate::generic::Secp256k1KeyPair;
 use crate::generic::share::Party2Share;
@@ -37,6 +37,7 @@ pub struct Party2SignMsg2 {
 
 pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1SignMsg1, party2_share: &Party2Share, eph_keypair: Secp256k1KeyPair) -> Result<Party2SignMsg2, TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
         action: "sign".to_string(),
         step: 2,

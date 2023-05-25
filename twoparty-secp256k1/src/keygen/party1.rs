@@ -3,7 +3,7 @@ use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
-use common::errors::TwoPartyError;
+use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::generic::{self, DLogCommitment, DLogWitness, Secp256k1KeyPair};
 use crate::generic::share::{Party1Private, Party1Public, Party1Share};
 use crate::keygen::correct_encrypt_secret::{CorrectEncryptSecretProof, CorrectEncryptSecretStatement};
@@ -38,6 +38,7 @@ pub struct Party1KeygenMsg2 {
 /// comm_witness was generate and stored by party1 at step1
 pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWitness, secp256k1_keypair: Secp256k1KeyPair) -> Result<(Party1KeygenMsg2, Party1Share), TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
         action: "keygen".to_string(),
         step: 2,
@@ -89,7 +90,6 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWit
     };
     let pub_key = &party1_private.x1 * peer_public_share;
     let party1_public = Party1Public {
-        public_share: secp256k1_keypair.public,
         paillier_ek: ek.clone(),
         pub_key,
     };

@@ -1,3 +1,4 @@
+use curv::arithmetic::Integer;
 use curv::BigInt;
 
 
@@ -62,4 +63,15 @@ fn test_sign() {
     let sig = party1_result3.unwrap();
 
     println!("sig={:?}", sig)
+}
+
+
+#[test]
+pub fn test_mod_floor() {
+    let modulus = BigInt::from(-2);
+    for v in [5, -5] {
+        let v_bn = BigInt::from(v);
+        let mf = v_bn.mod_floor(&modulus);
+        println!("{} mod_floor {} ={}", v, modulus, mf);
+    }
 }

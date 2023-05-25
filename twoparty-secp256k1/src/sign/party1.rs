@@ -4,7 +4,7 @@ use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
-use common::errors::TwoPartyError;
+use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::{generic};
 use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
 use crate::generic::share::Party1Share;
@@ -34,6 +34,7 @@ pub struct Party1SignMsg2 {
 
 pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness, message_hash: &BigInt) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
         action: "sign".to_string(),
         step: 2,
@@ -67,6 +68,7 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 // compute signature with encrypted_partial_s
 pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: Secp256k1KeyPair, message_hash: &BigInt, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
     let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
         action: "sign".to_string(),
         step: 3,
