@@ -6,3 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+curv-kzen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+
+[features]
+default = ["curv-kzen/rust-gmp-kzen"]

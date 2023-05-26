@@ -10,7 +10,7 @@ use crate::{ChosenHash, generic};
 use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
 use crate::generic::share::{Party1Private, Party1Public, Party1Share};
 use crate::keygen::correct_encrypt_secret::{CorrectEncryptSecretProof, CorrectEncryptSecretStatement};
-use crate::rotate::party2::Party2RotateMsg1;
+use crate::rotate::party2::{Party2RotateMsg1, Party2RotateMsg2};
 
 pub type Party1RotateMsg1 = DLogCommitment;
 
@@ -111,4 +111,30 @@ pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DL
     };
 
     Ok((party1_rotate_msg2, new_share))
+}
+
+// do this check, will ensure party1 won't loss the share by  rotating incorrectly
+pub fn party1_step3(party2_rotate_msg2: Party2RotateMsg2, pending_share: Party1Share) -> Result<Party1Share, TwoPartyError> {
+    let mut error = TwoPartyError {
+        scope: SCOPE_ECDSA_SECP256K1.to_string(),
+        party: 1,
+        action: "rotate".to_string(),
+        step: 2,
+        reason: "".to_string(),
+    };
+    // verify d_log_proof of new x2
+    let new_x2_proof = party2_rotate_msg2.new_x2_proof;
+    let flag = new_x2_proof.verify(None);
+    if !flag {
+        error.reason = "fail to verify new_x2_proof".to_string();
+        return Err(error);
+    }
+    // check if the pub_key is the same as old
+    let x1_new = &pending_share.private.x1;
+    let pub_new = x1_new * &new_x2_proof.Q;
+    if &pub_new != &pending_share.public.pub_key {
+        error.reason = "new public key is not the same as old".to_string();
+        return Err(error);
+    }
+    Ok(pending_share)
 }

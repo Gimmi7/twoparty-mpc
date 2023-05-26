@@ -1,7 +1,6 @@
 use curv::arithmetic::{BitManipulation, Integer};
 
 
-
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::SALT_STRING;
@@ -28,11 +27,16 @@ pub fn party2_step1() -> (Party2RotateMsg1, Secp256k1KeyPair) {
     )
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Party2RotateMsg2 {
+    pub new_x2_proof: DLogProof<Secp256k1, ChosenHash>,
+}
+
 pub fn party2_step2(
     party1_rotate_msg2: Party1RotateMsg2,
     party1_rotate_msg1: Party1RotateMsg1,
     seed_keypair: Secp256k1KeyPair,
-    old_share: &Party2Share) -> Result<Party2Share, TwoPartyError> {
+    old_share: &Party2Share) -> Result<(Party2RotateMsg2, Party2Share), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
@@ -81,7 +85,7 @@ pub fn party2_step2(
 
     // verify d_log_proof of new x1
     let new_x1_proof = &party1_rotate_msg2.new_x1_proof;
-    let flag =new_x1_proof.verify(None);
+    let flag = new_x1_proof.verify(None);
     if !flag {
         error.reason = "fail to verify d_log_proof for new x1".to_string();
         return Err(error);
@@ -114,6 +118,10 @@ pub fn party2_step2(
         return Err(error);
     }
 
+    // d_log_proof for new x2
+    let new_x2_proof = DLogProof::prove(&x2_new, None);
+
+
     // construct party2 share
     let party2_private = Party2Private {
         x2: x2_new,
@@ -125,5 +133,10 @@ pub fn party2_step2(
     };
     let new_share = Party2Share { public: party2_public, private: party2_private };
 
-    Ok(new_share)
+    Ok((
+        Party2RotateMsg2 {
+            new_x2_proof
+        },
+        new_share
+    ))
 }

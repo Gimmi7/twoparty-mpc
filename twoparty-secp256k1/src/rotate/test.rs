@@ -41,7 +41,7 @@ fn rotate_share(share1: Party1Share, share2: Party2Share) -> (Party1Share, Party
         println!("{}", party1_result2.err().unwrap());
         panic!("")
     }
-    let (party1_rotate_msg2, share11) = party1_result2.unwrap();
+    let (party1_rotate_msg2, pending_share) = party1_result2.unwrap();
 
 
     // party2 step2
@@ -55,7 +55,14 @@ fn rotate_share(share1: Party1Share, share2: Party2Share) -> (Party1Share, Party
         println!("{}", party2_result2.err().unwrap());
         panic!("")
     }
-    let share22 = party2_result2.unwrap();
+    let (party2_rotate_msg2, share22) = party2_result2.unwrap();
 
+    // party1 step3
+    let party1_result3 = rotate::party1::party1_step3(party2_rotate_msg2, pending_share);
+    if party1_result3.is_err() {
+        println!("{}", party1_result3.err().unwrap());
+        panic!("")
+    }
+    let share11 = party1_result3.unwrap();
     (share11, share22)
 }
