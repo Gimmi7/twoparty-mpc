@@ -1,14 +1,14 @@
-use curv::arithmetic::{BitManipulation, Converter};
-use curv::BigInt;
-use curv::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use curv::cryptographic_primitives::commitments::traits::Commitment;
-use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
+use curv::arithmetic::{BitManipulation};
+
+
+
 use curv::elliptic::curves::Secp256k1;
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::{SALT_STRING};
+use common::DLogProof;
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::ChosenHash;
-use crate::generic::{self, Secp256k1KeyPair};
+use crate::generic::{self, calc_point_hash_commitment, Secp256k1KeyPair};
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
 use crate::keygen::correct_encrypt_secret::CorrectEncryptSecretStatement;
 use crate::keygen::party1::{Party1KeyGenMsg1, Party1KeygenMsg2};
@@ -41,36 +41,25 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     };
 
     let d_log_witness = party1_keygen_msg2.d_log_witness;
-    // verify peer's public_share is not zero
-    let peer_public_share = &d_log_witness.d_log_proof.pk;
-    if peer_public_share.is_zero() {
-        error.reason = "peer's public_share is zero".to_string();
-        return Err(error);
-    }
-    // verify party1's pk_commitment= hash(public_share, blind)
-    let pk_commitment = &party1_keygen_msg1.pk_commitment;
-    let pk_commitment_blind_factor = &d_log_witness.pk_commitment_blind_factor;
-    if pk_commitment != &HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-        &BigInt::from_bytes(peer_public_share.to_bytes(true).as_ref()),
-        pk_commitment_blind_factor,
-    ) {
+    let peer_public_share = &d_log_witness.d_log_proof.Q;
+    // verify party1's Q_hash_commitment= hash(public_share, blind)
+    let Q_hash_commitment = &party1_keygen_msg1.Q_hash_commitment;
+    let Q_blind_factor = &d_log_witness.Q_blind_factor;
+    if Q_hash_commitment != &calc_point_hash_commitment(peer_public_share, Q_blind_factor) {
         error.reason = "fail to verify pk_commitment".to_string();
         return Err(error);
     }
-    // verify party1's zk_pok_commitment = ( R, zk_pok_blind_factor)
-    let zk_pok_commitment = &party1_keygen_msg1.zk_pok_commitment;
-    let point_r = &d_log_witness.d_log_proof.pk_t_rand_commitment;
-    let zk_pok_commitment_blind_factor = &d_log_witness.zk_pok_blind_factor;
-    if zk_pok_commitment != &HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-        &BigInt::from_bytes(point_r.to_bytes(true).as_ref()),
-        zk_pok_commitment_blind_factor,
-    ) {
+    // verify party1's R_hash_commitment = ( R, blind)
+    let R_hash_commitment = &party1_keygen_msg1.R_hash_commitment;
+    let point_r = &d_log_witness.d_log_proof.R;
+    let R_blind_factor = &d_log_witness.R_blind_factor;
+    if R_hash_commitment != &calc_point_hash_commitment(point_r, R_blind_factor) {
         error.reason = "fail to verify zk_pok_commitment".to_string();
         return Err(error);
     }
     // verify peer's d_log_proof
-    let result = DLogProof::verify(&d_log_witness.d_log_proof);
-    if result.is_err() {
+    let flag = &d_log_witness.d_log_proof.verify(None);
+    if !flag {
         error.reason = "fail to verify d_log_proof".to_string();
         return Err(error);
     }

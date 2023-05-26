@@ -1,10 +1,10 @@
 use curv::arithmetic::Integer;
 use curv::BigInt;
-use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
+use common::DLogProof;
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::{ChosenHash, generic};
 use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
@@ -44,14 +44,10 @@ pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DL
 
     let peer_seed_d_log_proof = party2_rotate_msg1.d_log_proof;
     // verify peer's seed is not zero
-    let peer_seed = &peer_seed_d_log_proof.pk;
-    if peer_seed.is_zero() {
-        error.reason = "peer's seed is zero".to_string();
-        return Err(error);
-    }
+    let peer_seed = &peer_seed_d_log_proof.Q;
     // verify peer's seed_d_log_proof
-    let result = DLogProof::verify(&peer_seed_d_log_proof);
-    if result.is_err() {
+    let flag = &peer_seed_d_log_proof.verify(None);
+    if !flag {
         error.reason = "fail to verify seed_d_log_proof".to_string();
         return Err(error);
     }
@@ -62,8 +58,8 @@ pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DL
     let x1_new = &old_share.private.x1 * factor_fe;
 
     // d_log_proof for new x1
-    let new_x1_proof = DLogProof::prove(&x1_new);
-    let x1_G = &new_x1_proof.pk;
+    let new_x1_proof = DLogProof::prove(&x1_new, None);
+    let x1_G = &new_x1_proof.Q;
 
     // party1 init new paillier keypair
     let (ek, dk) = Paillier::keypair().keys();

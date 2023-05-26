@@ -35,13 +35,13 @@ pub fn party2_step2(party1_export_msg2: Party1ExportMsg2, challenge: &BigInt, sh
     };
 
     let x1_d_log_proof = party1_export_msg2.x1_d_log_proof;
-    let flag = x1_d_log_proof.verify(challenge);
+    let flag = x1_d_log_proof.verify(Some(challenge));
     if !flag {
         error.reason = "fail to verify x1_d_log_proof".to_string();
         return Err(error);
     }
 
-    let x1_G = x1_d_log_proof.pk;
+    let x1_G = x1_d_log_proof.Q;
     let x2 = &share.private.x2.to_bigint();
     let pub_key = &share.public.pub_key;
     if (Scalar::<Secp256k1>::from(x2) * x1_G).x_coord().unwrap() !=

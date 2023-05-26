@@ -2,11 +2,13 @@ use curv::BigInt;
 use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
+use common::DLogProof;
 
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
+use crate::ChosenHash;
 
 use crate::export::party2::{Party2ExportMsg1, Party2ExportMsg2};
-use crate::generic::challenge_dlog::ChallengeDLogProof;
+
 
 use crate::generic::share::Party1Share;
 
@@ -17,13 +19,13 @@ pub fn party1_step1() {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1ExportMsg2 {
-    pub x1_d_log_proof: ChallengeDLogProof,
+    pub x1_d_log_proof: DLogProof<Secp256k1, ChosenHash>,
 }
 
 pub fn party1_step2(party2_export_msg1: Party2ExportMsg1, share: &Party1Share) -> Party1ExportMsg2 {
     let challenge = party2_export_msg1.challenge;
     let x1 = &share.private.x1;
-    let x1_d_log_proof = ChallengeDLogProof::prove(x1, &challenge);
+    let x1_d_log_proof = DLogProof::prove(x1, Some(&challenge));
     Party1ExportMsg2 {
         x1_d_log_proof
     }

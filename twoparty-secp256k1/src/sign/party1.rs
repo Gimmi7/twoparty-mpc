@@ -1,6 +1,6 @@
 use curv::arithmetic::{BitManipulation, Converter, Integer};
 use curv::BigInt;
-use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
+
 use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
@@ -43,14 +43,14 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 
 
     let peer_d_log_proof = party2_sign_msg1.d_log_proof;
-    let k2_G = &peer_d_log_proof.pk;
+    let k2_G = &peer_d_log_proof.Q;
     if k2_G.is_zero() {
         error.reason = "k2_G is zero".to_string();
         return Err(error);
     }
 
-    let result = DLogProof::verify(&peer_d_log_proof);
-    if result.is_err() {
+    let flag = &peer_d_log_proof.verify(None);
+    if !flag {
         error.reason = "fail to verify d_log_proof".to_string();
         return Err(error);
     }

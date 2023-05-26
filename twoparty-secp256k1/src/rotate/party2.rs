@@ -1,14 +1,14 @@
-use curv::arithmetic::{BitManipulation, Converter, Integer};
-use curv::BigInt;
-use curv::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use curv::cryptographic_primitives::commitments::traits::Commitment;
-use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
+use curv::arithmetic::{BitManipulation, Integer};
+
+
+
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::SALT_STRING;
+use common::DLogProof;
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::{ChosenHash, generic};
-use crate::generic::Secp256k1KeyPair;
+use crate::generic::{calc_point_hash_commitment, Secp256k1KeyPair};
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
 use crate::keygen::correct_encrypt_secret::CorrectEncryptSecretStatement;
 use crate::rotate::party1::{Party1RotateMsg1, Party1RotateMsg2};
@@ -43,36 +43,25 @@ pub fn party2_step2(
 
     let seed_d_log_witness = party1_rotate_msg2.seed_d_log_witness;
     let seed_d_log_proof = &seed_d_log_witness.d_log_proof;
-    // verify peer's seed is not zero
-    let peer_seed = &seed_d_log_proof.pk;
-    if peer_seed.is_zero() {
-        error.reason = "peer's seed is zero".to_string();
-        return Err(error);
-    }
+    let peer_seed = &seed_d_log_proof.Q;
     // verify party1's seed_pk_commitment=hash(seed, blind)
-    let seed_pk_commitment = &party1_rotate_msg1.pk_commitment;
-    let seed_pk_blind = &seed_d_log_witness.pk_commitment_blind_factor;
-    if seed_pk_commitment != &HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-        &BigInt::from_bytes(peer_seed.to_bytes(true).as_ref()),
-        seed_pk_blind,
-    ) {
+    let Q_hash_commitment = &party1_rotate_msg1.Q_hash_commitment;
+    let Q_blind_factor = &seed_d_log_witness.Q_blind_factor;
+    if Q_hash_commitment != &calc_point_hash_commitment(peer_seed, Q_blind_factor) {
         error.reason = "fail to verify seed pk_commitment".to_string();
         return Err(error);
     }
     // verify party1's seed zk_pok_commitment = hash( R, pok_blind)
-    let seed_pok_commitment = &party1_rotate_msg1.zk_pok_commitment;
-    let R = &seed_d_log_proof.pk_t_rand_commitment;
-    let seed_pok_blind = &seed_d_log_witness.zk_pok_blind_factor;
-    if seed_pok_commitment != &HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(
-        &BigInt::from_bytes(R.to_bytes(true).as_ref()),
-        seed_pok_blind,
-    ) {
+    let R_hash_commitment = &party1_rotate_msg1.R_hash_commitment;
+    let R = &seed_d_log_proof.R;
+    let R_blind_factor = &seed_d_log_witness.R_blind_factor;
+    if R_hash_commitment != &calc_point_hash_commitment(R, R_blind_factor) {
         error.reason = "fail to verify seed pok_commitment".to_string();
         return Err(error);
     }
     // verify peer's seed d_log_proof
-    let result = DLogProof::verify(seed_d_log_proof);
-    if result.is_err() {
+    let flag = seed_d_log_proof.verify(None);
+    if !flag {
         error.reason = "failt to verify peer's seed d_log_proof".to_string();
         return Err(error);
     }
@@ -92,8 +81,8 @@ pub fn party2_step2(
 
     // verify d_log_proof of new x1
     let new_x1_proof = &party1_rotate_msg2.new_x1_proof;
-    let result = DLogProof::verify(new_x1_proof);
-    if result.is_err() {
+    let flag =new_x1_proof.verify(None);
+    if !flag {
         error.reason = "fail to verify d_log_proof for new x1".to_string();
         return Err(error);
     }
@@ -103,7 +92,7 @@ pub fn party2_step2(
     let statement = CorrectEncryptSecretStatement {
         paillier_ek: paillier_ek.clone(),
         c: encrypted_x1.clone(),
-        Q: new_x1_proof.pk.clone(),
+        Q: new_x1_proof.Q.clone(),
     };
     let result = party1_rotate_msg2.correct_encrypt_secret_proof.verify(&statement);
     if result.is_err() {
@@ -119,7 +108,7 @@ pub fn party2_step2(
     let x2_new = &old_share.private.x2 * factor_inv;
 
     // check if the new pub_key is the same as old
-    let pub_new = &x2_new * &new_x1_proof.pk;
+    let pub_new = &x2_new * &new_x1_proof.Q;
     if pub_new != old_share.public.pub_key {
         error.reason = "new public key is not the same as old".to_string();
         return Err(error);

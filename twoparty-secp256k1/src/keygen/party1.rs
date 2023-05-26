@@ -1,8 +1,8 @@
 use curv::BigInt;
-use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
+
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
 use crate::generic::{self, DLogCommitment, DLogWitness, Secp256k1KeyPair};
 use crate::generic::share::{Party1Private, Party1Public, Party1Share};
@@ -46,14 +46,10 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWit
     };
 
     // verify peer's public_share is not zero
-    let peer_public_share = &party2_keygen_msg1.d_log_proof.pk;
-    if peer_public_share.is_zero() {
-        error.reason = "peer's public_share is zero".to_string();
-        return Err(error);
-    }
+    let peer_public_share = &party2_keygen_msg1.d_log_proof.Q;
     // verify peer's d_log_proof
-    let result = DLogProof::verify(&party2_keygen_msg1.d_log_proof);
-    if result.is_err() {
+    let flag =&party2_keygen_msg1.d_log_proof.verify(None);
+    if !flag {
         error.reason = "fail to verify d_log_proof".to_string();
         return Err(error);
     }
@@ -74,7 +70,7 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWit
     let statement = CorrectEncryptSecretStatement {
         paillier_ek: ek.clone(),
         c: encrypted_x1.clone(),
-        Q: d_log_witness.d_log_proof.pk.clone(),
+        Q: d_log_witness.d_log_proof.Q.clone(),
     };
     let correct_encrypt_secret_proof = CorrectEncryptSecretProof::prove(
         &secp256k1_keypair.secret.to_bigint(),
