@@ -5,12 +5,13 @@ use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::{generic};
+use crate::{ChosenHash, generic};
 use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
 use crate::generic::share::Party1Share;
 use crate::sign::ECDSASignature;
 use crate::sign::party2::{Party2SignMsg1, Party2SignMsg2};
 use subtle::ConstantTimeEq;
+use common::DLogProof;
 
 pub type Party1SignMsg1 = DLogCommitment;
 
@@ -28,11 +29,13 @@ pub fn party1_step1() -> (Party1SignMsg1, DLogWitness, Secp256k1KeyPair) {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1SignMsg2 {
+    // d_log_witness for ephemeral k1
     pub d_log_witness: DLogWitness,
-    pub message_hash: BigInt,
+    pub message_digest: BigInt,
+    pub x1_d_log_proof: DLogProof<Secp256k1, ChosenHash>,
 }
 
-pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness, message_hash: &BigInt) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
+pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness, message_digest: &BigInt, eph_keypair: &Secp256k1KeyPair, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -44,10 +47,6 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 
     let peer_d_log_proof = party2_sign_msg1.d_log_proof;
     let k2_G = &peer_d_log_proof.Q;
-    if k2_G.is_zero() {
-        error.reason = "k2_G is zero".to_string();
-        return Err(error);
-    }
 
     let flag = &peer_d_log_proof.verify(None);
     if !flag {
@@ -55,10 +54,19 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
         return Err(error);
     }
 
+    // d_log of x1 with R= k1*k2*G as  challenge
+    let k1 = &eph_keypair.secret;
+    let R = k1 * k2_G;
+    let x1_d_log_proof = DLogProof::prove(
+        &share.private.x1,
+        Some(&BigInt::from_bytes(R.to_bytes(false).as_ref())),
+    );
+
     Ok((
         Party1SignMsg2 {
             d_log_witness,
-            message_hash: message_hash.clone(),
+            message_digest: message_digest.clone(),
+            x1_d_log_proof,
         },
         k2_G.clone()
     ))

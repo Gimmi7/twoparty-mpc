@@ -37,7 +37,7 @@ pub fn full_keygen() -> (Party1Share, Party2Share) {
     (party1_share, party2_share)
 }
 
-pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_hash: &BigInt) -> ECDSASignature {
+pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_digest: &BigInt) -> ECDSASignature {
     // party1 step1
     let (
         party1_sign_msg1,
@@ -53,7 +53,9 @@ pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_hash: &B
     let party1_result2 = sign::party1::party1_step2(
         party2_sign_msg1,
         d_log_witness,
-        message_hash,
+        message_digest,
+        &party1_eph_keypair,
+        share1
     );
     if party1_result2.is_err() {
         println!("{}", party1_result2.err().unwrap());
@@ -76,7 +78,7 @@ pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_hash: &B
         party2_sign_msg2,
         share1,
         party1_eph_keypair,
-        message_hash,
+        message_digest,
         k2_G,
     );
     if party1_result3.is_err() {

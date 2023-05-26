@@ -1,4 +1,4 @@
-use curv::arithmetic::{BasicOps, Integer, Modulo, Samplable};
+use curv::arithmetic::{BasicOps, Converter, Integer, Modulo, Samplable};
 use curv::BigInt;
 
 
@@ -44,17 +44,20 @@ pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1Si
         reason: "".to_string(),
     };
 
+
+    // verify ephemeral d_log_proof & ephemeral same with prev commitment
+
     let d_log_witness = party1_sign_msg2.d_log_witness;
     let peer_d_log_proof = &d_log_witness.d_log_proof;
     let k1_G = &peer_d_log_proof.Q;
-    // verify party1's pk_commitment= hash(k1_G, blind)
+    // verify party1's k1_G_hash_commitment= hash(k1_G, blind)
     let Q_hash_commitment = &party1_sign_msg1.Q_hash_commitment;
     let Q_blind_factor = &d_log_witness.Q_blind_factor;
     if Q_hash_commitment != &calc_point_hash_commitment(k1_G, Q_blind_factor) {
         error.reason = "fail to verify pk_commitment".to_string();
         return Err(error);
     }
-    // verify party1's zk_pok_commitment = ( R, zk_pok_blind_factor)
+    // verify party1's R_hash_commitment = ( R, blind)
     let R_hash_commitment = &party1_sign_msg1.R_hash_commitment;
     let point_r = &d_log_witness.d_log_proof.R;
     let R_blind_factor = &d_log_witness.R_blind_factor;
@@ -69,16 +72,24 @@ pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1Si
         return Err(error);
     }
 
-    // calc the encrypted version of:  k2^{-1}⋅H(m) + k2^{-1}⋅r⋅x1⋅x2 + rho.q
-    let msg_hash = party1_sign_msg2.message_hash;
-    let q = Scalar::<Secp256k1>::group_order();
+    // verify party1 has the knowledge of x1, this can make sign operation based on the intractability of d_log problem
     let k2 = &eph_keypair.secret;
     let R = k2 * k1_G;
+    let x1_d_log_proof = party1_sign_msg2.x1_d_log_proof;
+    let flag = x1_d_log_proof.verify(Some(&BigInt::from_bytes(R.to_bytes(false).as_ref())));
+    if !flag {
+        error.reason = "fail to verify x1_d_log_proof with challenge= k1*k1*G".to_string();
+        return Err(error);
+    }
+
+    // calc the encrypted version of:  k2^{-1}⋅H(m) + k2^{-1}⋅r⋅x1⋅x2 + rho.q
+    let message_digest = party1_sign_msg2.message_digest;
+    let q = Scalar::<Secp256k1>::group_order();
     let r = R.x_coord().unwrap().mod_floor(q);
     let k2_inv = BigInt::mod_inv(&k2.to_bigint(), q).unwrap();
     let rho = BigInt::sample_below(&q.pow(2));
 
-    let partial_sig = rho * q.clone() + BigInt::mod_mul(&k2_inv, &msg_hash, q);
+    let partial_sig = rho * q.clone() + BigInt::mod_mul(&k2_inv, &message_digest, q);
     let c1 = Paillier::encrypt(&party2_share.public.paillier_ek, RawPlaintext::from(partial_sig));
 
     let k2_inv_r_x2 = BigInt::mod_mul(
