@@ -16,4 +16,5 @@ sha3 = "0.9"  # curv-kzen::DLogProof api can only use version=0.9
 uuid = "1.3.2"
 common = { package = "twoparty-common", path = "twoparty-common" }
 subtle = "2.5.0"
+rand = "0.8.5"
 

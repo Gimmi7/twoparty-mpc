@@ -9,6 +9,8 @@ edition = "2021"
 curv-kzen.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+rand.workspace = true
+sha3.workspace = true
 
 
 [features]

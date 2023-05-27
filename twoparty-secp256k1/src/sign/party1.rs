@@ -5,19 +5,18 @@ use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::{ChosenHash, generic};
-use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
+
 use crate::generic::share::Party1Share;
 use crate::sign::ECDSASignature;
 use crate::sign::party2::{Party2SignMsg1, Party2SignMsg2};
 use subtle::ConstantTimeEq;
-use common::DLogProof;
+use common::dlog::{CurveKeyPair, DLogCommitment, DLogProof, DLogWitness};
 
 pub type Party1SignMsg1 = DLogCommitment;
 
 
-pub fn party1_step1() -> (Party1SignMsg1, DLogWitness, Secp256k1KeyPair) {
-    let (d_log_witness, d_log_commitment, eph_keypair) = generic::generate_keypair_with_blind_dlog_proof();
+pub fn party1_step1() -> (Party1SignMsg1, DLogWitness<Secp256k1>, CurveKeyPair<Secp256k1>) {
+    let (eph_keypair, d_log_commitment, d_log_witness) = CurveKeyPair::generate_keypair_and_blind_d_log_proof();
 
     (
         d_log_commitment,
@@ -30,12 +29,12 @@ pub fn party1_step1() -> (Party1SignMsg1, DLogWitness, Secp256k1KeyPair) {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1SignMsg2 {
     // d_log_witness for ephemeral k1
-    pub d_log_witness: DLogWitness,
+    pub d_log_witness: DLogWitness<Secp256k1>,
     pub message_digest: BigInt,
-    pub x1_d_log_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub x1_d_log_proof: DLogProof<Secp256k1>,
 }
 
-pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness, message_digest: &BigInt, eph_keypair: &Secp256k1KeyPair, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
+pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness<Secp256k1>, message_digest: &BigInt, eph_keypair: &CurveKeyPair<Secp256k1>, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -74,7 +73,7 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 
 
 // compute signature with encrypted_partial_s
-pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: Secp256k1KeyPair, message_hash: &BigInt, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
+pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: CurveKeyPair<Secp256k1>, message_hash: &BigInt, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,

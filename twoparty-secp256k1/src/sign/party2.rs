@@ -5,21 +5,20 @@ use curv::BigInt;
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{Add, Encrypt, Mul, Paillier, RawCiphertext, RawPlaintext};
 use serde::{Deserialize, Serialize};
-use common::DLogProof;
+use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::{ChosenHash, generic};
-use crate::generic::{calc_point_hash_commitment, Secp256k1KeyPair};
+
 use crate::generic::share::Party2Share;
 use crate::sign::party1::{Party1SignMsg1, Party1SignMsg2};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party2SignMsg1 {
-    pub d_log_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub d_log_proof: DLogProof<Secp256k1>,
 }
 
 
-pub fn party2_step1() -> (Party2SignMsg1, Secp256k1KeyPair) {
-    let (d_log_proof, eph_keypair) = generic::generate_keypair_with_dlog_proof();
+pub fn party2_step1() -> (Party2SignMsg1, CurveKeyPair<Secp256k1>) {
+    let (eph_keypair, d_log_proof) = CurveKeyPair::generate_keypair_and_d_log_proof();
     (
         Party2SignMsg1 {
             d_log_proof,
@@ -35,7 +34,7 @@ pub struct Party2SignMsg2 {
 }
 
 
-pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1SignMsg1, party2_share: &Party2Share, eph_keypair: Secp256k1KeyPair) -> Result<Party2SignMsg2, TwoPartyError> {
+pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1SignMsg1, party2_share: &Party2Share, eph_keypair: CurveKeyPair<Secp256k1>) -> Result<Party2SignMsg2, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
@@ -48,31 +47,19 @@ pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1Si
     // verify ephemeral d_log_proof & ephemeral same with prev commitment
 
     let d_log_witness = party1_sign_msg2.d_log_witness;
-    let peer_d_log_proof = &d_log_witness.d_log_proof;
-    let k1_G = &peer_d_log_proof.Q;
-    // verify party1's k1_G_hash_commitment= hash(k1_G, blind)
+    // verify ephemeral d_log_proof_blind
     let Q_hash_commitment = &party1_sign_msg1.Q_hash_commitment;
-    let Q_blind_factor = &d_log_witness.Q_blind_factor;
-    if Q_hash_commitment != &calc_point_hash_commitment(k1_G, Q_blind_factor) {
-        error.reason = "fail to verify pk_commitment".to_string();
-        return Err(error);
-    }
-    // verify party1's R_hash_commitment = ( R, blind)
     let R_hash_commitment = &party1_sign_msg1.R_hash_commitment;
-    let point_r = &d_log_witness.d_log_proof.R;
-    let R_blind_factor = &d_log_witness.R_blind_factor;
-    if R_hash_commitment != &calc_point_hash_commitment(point_r, R_blind_factor) {
-        error.reason = "fail to verify zk_pok_commitment".to_string();
-        return Err(error);
-    }
-    // verify peer's d_log_proof
-    let flag = peer_d_log_proof.verify(None);
+    let flag = d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
     if !flag {
-        error.reason = "fail to verify d_log_proof".to_string();
+        error.reason = "fail to very ephemeral d_log_proof_blind".to_string();
         return Err(error);
     }
 
+
     // verify party1 has the knowledge of x1, this can make sign operation based on the intractability of d_log problem
+    let peer_d_log_proof = &d_log_witness.d_log_proof;
+    let k1_G = &peer_d_log_proof.Q;
     let k2 = &eph_keypair.secret;
     let R = k2 * k1_G;
     let x1_d_log_proof = party1_sign_msg2.x1_d_log_proof;

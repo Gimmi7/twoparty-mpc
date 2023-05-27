@@ -4,21 +4,20 @@ use curv::arithmetic::{BitManipulation, Integer};
 use curv::elliptic::curves::{Scalar, Secp256k1};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::SALT_STRING;
-use common::DLogProof;
+use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::{ChosenHash, generic};
-use crate::generic::{calc_point_hash_commitment, Secp256k1KeyPair};
+
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
 use crate::keygen::correct_encrypt_secret::CorrectEncryptSecretStatement;
 use crate::rotate::party1::{Party1RotateMsg1, Party1RotateMsg2};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party2RotateMsg1 {
-    pub d_log_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub d_log_proof: DLogProof<Secp256k1>,
 }
 
-pub fn party2_step1() -> (Party2RotateMsg1, Secp256k1KeyPair) {
-    let (d_log_proof, seed_keypair) = generic::generate_keypair_with_dlog_proof();
+pub fn party2_step1() -> (Party2RotateMsg1, CurveKeyPair<Secp256k1>) {
+    let (seed_keypair, d_log_proof) = CurveKeyPair::generate_keypair_and_d_log_proof();
     (
         Party2RotateMsg1 {
             d_log_proof,
@@ -29,13 +28,13 @@ pub fn party2_step1() -> (Party2RotateMsg1, Secp256k1KeyPair) {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party2RotateMsg2 {
-    pub new_x2_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub new_x2_proof: DLogProof<Secp256k1>,
 }
 
 pub fn party2_step2(
     party1_rotate_msg2: Party1RotateMsg2,
     party1_rotate_msg1: Party1RotateMsg1,
-    seed_keypair: Secp256k1KeyPair,
+    seed_keypair: CurveKeyPair<Secp256k1>,
     old_share: &Party2Share) -> Result<(Party2RotateMsg2, Party2Share), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
@@ -45,30 +44,16 @@ pub fn party2_step2(
         reason: "".to_string(),
     };
 
+    // verify party1's seed d_log_proof_blind
     let seed_d_log_witness = party1_rotate_msg2.seed_d_log_witness;
-    let seed_d_log_proof = &seed_d_log_witness.d_log_proof;
-    let peer_seed = &seed_d_log_proof.Q;
-    // verify party1's seed_pk_commitment=hash(seed, blind)
     let Q_hash_commitment = &party1_rotate_msg1.Q_hash_commitment;
-    let Q_blind_factor = &seed_d_log_witness.Q_blind_factor;
-    if Q_hash_commitment != &calc_point_hash_commitment(peer_seed, Q_blind_factor) {
-        error.reason = "fail to verify seed pk_commitment".to_string();
-        return Err(error);
-    }
-    // verify party1's seed zk_pok_commitment = hash( R, pok_blind)
     let R_hash_commitment = &party1_rotate_msg1.R_hash_commitment;
-    let R = &seed_d_log_proof.R;
-    let R_blind_factor = &seed_d_log_witness.R_blind_factor;
-    if R_hash_commitment != &calc_point_hash_commitment(R, R_blind_factor) {
-        error.reason = "fail to verify seed pok_commitment".to_string();
-        return Err(error);
-    }
-    // verify peer's seed d_log_proof
-    let flag = seed_d_log_proof.verify(None);
+    let flag = seed_d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
     if !flag {
-        error.reason = "failt to verify peer's seed d_log_proof".to_string();
+        error.reason = "fail to verify party1's seed d_log_proof_blind".to_string();
         return Err(error);
     }
+
 
     // verify paillier keypair generate correctly
     let paillier_ek = &party1_rotate_msg2.paillier_ek;
@@ -105,6 +90,8 @@ pub fn party2_step2(
     }
 
     // calc x2_new
+    let seed_d_log_proof = &seed_d_log_witness.d_log_proof;
+    let peer_seed = &seed_d_log_proof.Q;
     let q = Scalar::<Secp256k1>::group_order();
     let factor = (seed_keypair.secret * peer_seed).x_coord().unwrap().mod_floor(q);
     let factor_fe = Scalar::<Secp256k1>::from(factor);

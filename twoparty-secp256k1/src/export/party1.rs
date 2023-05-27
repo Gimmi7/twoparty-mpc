@@ -2,10 +2,10 @@ use curv::BigInt;
 use curv::elliptic::curves::{Point, Scalar, Secp256k1};
 use kzen_paillier::{Decrypt, Paillier, RawCiphertext};
 use serde::{Deserialize, Serialize};
-use common::DLogProof;
+use common::dlog::DLogProof;
 
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::ChosenHash;
+
 
 use crate::export::party2::{Party2ExportMsg1, Party2ExportMsg2};
 
@@ -19,7 +19,7 @@ pub fn party1_step1() {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1ExportMsg2 {
-    pub x1_d_log_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub x1_d_log_proof: DLogProof<Secp256k1>,
 }
 
 pub fn party1_step2(party2_export_msg1: Party2ExportMsg1, share: &Party1Share) -> Party1ExportMsg2 {

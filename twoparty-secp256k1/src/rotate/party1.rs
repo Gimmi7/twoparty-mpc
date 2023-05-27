@@ -4,18 +4,17 @@ use curv::elliptic::curves::{Scalar, Secp256k1};
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
-use common::DLogProof;
+use common::dlog::{CurveKeyPair, DLogCommitment, DLogProof, DLogWitness};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::{ChosenHash, generic};
-use crate::generic::{DLogCommitment, DLogWitness, Secp256k1KeyPair};
+
 use crate::generic::share::{Party1Private, Party1Public, Party1Share};
 use crate::keygen::correct_encrypt_secret::{CorrectEncryptSecretProof, CorrectEncryptSecretStatement};
 use crate::rotate::party2::{Party2RotateMsg1, Party2RotateMsg2};
 
 pub type Party1RotateMsg1 = DLogCommitment;
 
-pub fn party1_step1() -> (Party1RotateMsg1, DLogWitness, Secp256k1KeyPair) {
-    let (d_log_witness, d_log_commitment, seed_keypair) = generic::generate_keypair_with_blind_dlog_proof();
+pub fn party1_step1() -> (Party1RotateMsg1, DLogWitness<Secp256k1>, CurveKeyPair<Secp256k1>) {
+    let (seed_keypair, d_log_commitment, d_log_witness) = CurveKeyPair::generate_keypair_and_blind_d_log_proof();
     (
         d_log_commitment,
         d_log_witness,
@@ -25,15 +24,15 @@ pub fn party1_step1() -> (Party1RotateMsg1, DLogWitness, Secp256k1KeyPair) {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1RotateMsg2 {
-    pub seed_d_log_witness: DLogWitness,
+    pub seed_d_log_witness: DLogWitness<Secp256k1>,
     pub paillier_ek: EncryptionKey,
     pub encrypted_x1: BigInt,
     pub correct_paillier_key_proof: NiCorrectKeyProof,
     pub correct_encrypt_secret_proof: CorrectEncryptSecretProof,
-    pub new_x1_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub new_x1_proof: DLogProof<Secp256k1>,
 }
 
-pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DLogWitness, seed_keypair: Secp256k1KeyPair, old_share: &Party1Share) -> Result<(Party1RotateMsg2, Party1Share), TwoPartyError> {
+pub fn party1_step2(party2_rotate_msg1: Party2RotateMsg1, seed_d_log_witness: DLogWitness<Secp256k1>, seed_keypair: CurveKeyPair<Secp256k1>, old_share: &Party1Share) -> Result<(Party1RotateMsg2, Party1Share), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,

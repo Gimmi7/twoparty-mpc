@@ -1,10 +1,13 @@
 use curv::BigInt;
+
+use curv::elliptic::curves::Secp256k1;
 use kzen_paillier::{EncryptionKey, EncryptWithChosenRandomness, KeyGeneration, Paillier, Randomness, RawPlaintext};
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::NiCorrectKeyProof;
+use common::dlog::{CurveKeyPair, DLogCommitment, DLogWitness};
 
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::generic::{self, DLogCommitment, DLogWitness, Secp256k1KeyPair};
+
 use crate::generic::share::{Party1Private, Party1Public, Party1Share};
 use crate::keygen::correct_encrypt_secret::{CorrectEncryptSecretProof, CorrectEncryptSecretStatement};
 use crate::keygen::party2::Party2KeyGenMsg1;
@@ -14,8 +17,8 @@ pub type Party1KeyGenMsg1 = DLogCommitment;
 
 
 /// party1_step1: generate public_share commitment
-pub fn party1_step1() -> (Party1KeyGenMsg1, DLogWitness, Secp256k1KeyPair) {
-    let (d_log_witness, d_log_commitment, keypair) = generic::generate_keypair_with_blind_dlog_proof();
+pub fn party1_step1() -> (Party1KeyGenMsg1, DLogWitness<Secp256k1>, CurveKeyPair<Secp256k1>) {
+    let (keypair, d_log_commitment, d_log_witness) = CurveKeyPair::generate_keypair_and_blind_d_log_proof();
     (
         d_log_commitment,
         d_log_witness,
@@ -27,7 +30,7 @@ pub fn party1_step1() -> (Party1KeyGenMsg1, DLogWitness, Secp256k1KeyPair) {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party1KeygenMsg2 {
-    pub d_log_witness: DLogWitness,
+    pub d_log_witness: DLogWitness<Secp256k1>,
     pub paillier_ek: EncryptionKey,
     pub encrypted_x1: BigInt,
     pub correct_paillier_key_proof: NiCorrectKeyProof,
@@ -36,7 +39,7 @@ pub struct Party1KeygenMsg2 {
 
 /// init paillier keypair,  homomorphism encrypt x1 , proof paillier keypair generate correctly,
 /// comm_witness was generate and stored by party1 at step1
-pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWitness, secp256k1_keypair: Secp256k1KeyPair) -> Result<(Party1KeygenMsg2, Party1Share), TwoPartyError> {
+pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWitness<Secp256k1>, secp256k1_keypair: CurveKeyPair<Secp256k1>) -> Result<(Party1KeygenMsg2, Party1Share), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -48,7 +51,7 @@ pub fn party1_step2(party2_keygen_msg1: Party2KeyGenMsg1, d_log_witness: DLogWit
     // verify peer's public_share is not zero
     let peer_public_share = &party2_keygen_msg1.d_log_proof.Q;
     // verify peer's d_log_proof
-    let flag =&party2_keygen_msg1.d_log_proof.verify(None);
+    let flag = &party2_keygen_msg1.d_log_proof.verify(None);
     if !flag {
         error.reason = "fail to verify d_log_proof".to_string();
         return Err(error);

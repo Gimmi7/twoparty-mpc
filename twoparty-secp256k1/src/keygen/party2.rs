@@ -1,26 +1,24 @@
 use curv::arithmetic::{BitManipulation};
 
 
-
 use curv::elliptic::curves::Secp256k1;
 use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::{SALT_STRING};
-use common::DLogProof;
+use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
-use crate::ChosenHash;
-use crate::generic::{self, calc_point_hash_commitment, Secp256k1KeyPair};
+
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
 use crate::keygen::correct_encrypt_secret::CorrectEncryptSecretStatement;
 use crate::keygen::party1::{Party1KeyGenMsg1, Party1KeygenMsg2};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Party2KeyGenMsg1 {
-    pub d_log_proof: DLogProof<Secp256k1, ChosenHash>,
+    pub d_log_proof: DLogProof<Secp256k1>,
 }
 
 // party2_step1: generate public_share
-pub fn party2_step1() -> (Party2KeyGenMsg1, Secp256k1KeyPair) {
-    let (d_log_proof, keypair) = generic::generate_keypair_with_dlog_proof();
+pub fn party2_step1() -> (Party2KeyGenMsg1, CurveKeyPair<Secp256k1>) {
+    let (keypair, d_log_proof) = CurveKeyPair::generate_keypair_and_d_log_proof();
     (
         Party2KeyGenMsg1 {
             d_log_proof,
@@ -31,7 +29,7 @@ pub fn party2_step1() -> (Party2KeyGenMsg1, Secp256k1KeyPair) {
 
 // get paillier ek, get encrypted x1, verify prillier keypair generate correctly
 // party1_keygen_msg1 was stored by party2 before party2_step1
-pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Party1KeyGenMsg1, secp256k1_keypair: Secp256k1KeyPair) -> Result<Party2Share, TwoPartyError> {
+pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Party1KeyGenMsg1, secp256k1_keypair: CurveKeyPair<Secp256k1>) -> Result<Party2Share, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
@@ -41,26 +39,12 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     };
 
     let d_log_witness = party1_keygen_msg2.d_log_witness;
-    let peer_public_share = &d_log_witness.d_log_proof.Q;
-    // verify party1's Q_hash_commitment= hash(public_share, blind)
+    // verify x1 d_log_proof_blind
     let Q_hash_commitment = &party1_keygen_msg1.Q_hash_commitment;
-    let Q_blind_factor = &d_log_witness.Q_blind_factor;
-    if Q_hash_commitment != &calc_point_hash_commitment(peer_public_share, Q_blind_factor) {
-        error.reason = "fail to verify pk_commitment".to_string();
-        return Err(error);
-    }
-    // verify party1's R_hash_commitment = ( R, blind)
     let R_hash_commitment = &party1_keygen_msg1.R_hash_commitment;
-    let point_r = &d_log_witness.d_log_proof.R;
-    let R_blind_factor = &d_log_witness.R_blind_factor;
-    if R_hash_commitment != &calc_point_hash_commitment(point_r, R_blind_factor) {
-        error.reason = "fail to verify zk_pok_commitment".to_string();
-        return Err(error);
-    }
-    // verify peer's d_log_proof
-    let flag = &d_log_witness.d_log_proof.verify(None);
+    let flag = d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
     if !flag {
-        error.reason = "fail to verify d_log_proof".to_string();
+        error.reason = "fail to verify x1 blind d_log_proof".to_string();
         return Err(error);
     }
 
@@ -78,6 +62,7 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     }
 
     // verify correctly encrypted x1
+    let peer_public_share = &d_log_witness.d_log_proof.Q;
     let encrypted_x1 = party1_keygen_msg2.encrypted_x1;
     let statement = CorrectEncryptSecretStatement {
         paillier_ek: paillier_ek.clone(),
