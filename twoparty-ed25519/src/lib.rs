@@ -4,5 +4,5 @@ extern crate core;
 
 pub mod keygen;
 pub mod generic;
-
-type ChosenHash = sha3::Keccak512;
+#[cfg(test)]
+mod tests;

@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use serde::Serialize;
 
 pub const SCOPE_ECDSA_SECP256K1: &str = "ecdsa-secp256k1";
+pub const SCOPE_EDDSA_ED25519: &str = "eddsa-edd25519";
 
 #[derive(Serialize, Debug)]
 pub struct TwoPartyError {

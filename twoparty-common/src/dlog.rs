@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 
 
 const SECURITY_BITS: usize = 256;
+
 type ChosenHash = sha3::Keccak256;
 
 
@@ -103,18 +104,28 @@ impl<C: Curve> CurveKeyPair<C> {
     pub fn generate_keypair_and_d_log_proof() -> (CurveKeyPair<C>, DLogProof<C>) {
         let x = Scalar::<C>::random();
 
-        let d_log_proof = DLogProof::prove(&x, None);
+        CurveKeyPair::generate_keypair_and_d_log_proof_with_x(&x)
+    }
+
+    pub fn generate_keypair_and_d_log_proof_with_x(x: &Scalar<C>) -> (CurveKeyPair<C>, DLogProof<C>) {
+        let d_log_proof = DLogProof::prove(x, None);
 
         let keypair = CurveKeyPair {
             public: d_log_proof.Q.clone(),
-            secret: x,
+            secret: x.clone(),
         };
 
         (keypair, d_log_proof)
     }
 
     pub fn generate_keypair_and_blind_d_log_proof() -> (CurveKeyPair<C>, DLogCommitment, DLogWitness<C>) {
-        let (keypair, d_log_proof) = CurveKeyPair::generate_keypair_and_d_log_proof();
+        let x = Scalar::<C>::random();
+
+        CurveKeyPair::generate_keypair_and_blind_d_log_proof_with_x(&x)
+    }
+
+    pub fn generate_keypair_and_blind_d_log_proof_with_x(x: &Scalar<C>) -> (CurveKeyPair<C>, DLogCommitment, DLogWitness<C>) {
+        let (keypair, d_log_proof) = CurveKeyPair::generate_keypair_and_d_log_proof_with_x(x);
 
         let Q_blind_factor = BigInt::sample(SECURITY_BITS);
         let Q_hash_commitment = HashCommitment::<ChosenHash>::create_commitment_with_user_defined_randomness(

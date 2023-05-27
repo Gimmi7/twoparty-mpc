@@ -11,6 +11,8 @@ serde.workspace = true
 serde_json.workspace = true
 rand.workspace = true
 sha3.workspace = true
+common.workspace = true
+
 
 
 [features]

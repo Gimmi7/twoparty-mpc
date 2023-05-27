@@ -18,3 +18,5 @@ common = { package = "twoparty-common", path = "twoparty-common" }
 subtle = "2.5.0"
 rand = "0.8.5"
 
+[patch.crates-io]
+curv-kzen = { git = "https://github.com/Gimmi7/curv-cy", rev = "906ad3a349a49d16c378d1c9b22e6cef8427d886" }
