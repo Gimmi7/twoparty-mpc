@@ -46,9 +46,7 @@ pub fn party2_step2(
 
     // verify party1's seed d_log_proof_blind
     let seed_d_log_witness = party1_rotate_msg2.seed_d_log_witness;
-    let Q_hash_commitment = &party1_rotate_msg1.Q_hash_commitment;
-    let R_hash_commitment = &party1_rotate_msg1.R_hash_commitment;
-    let flag = seed_d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
+    let flag = seed_d_log_witness.verify(party1_rotate_msg1, None);
     if !flag {
         error.reason = "fail to verify party1's seed d_log_proof_blind".to_string();
         return Err(error);

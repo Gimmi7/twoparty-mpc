@@ -12,5 +12,4 @@ pub struct Ed25519Share {
     pub agg_Q: Point<Ed25519>,
     // aggregated -public_key
     pub agg_Q_minus: Point<Ed25519>,
-
 }

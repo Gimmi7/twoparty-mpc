@@ -3,6 +3,7 @@ use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use serde::{Deserialize, Serialize};
 use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_EDDSA_ED25519, TwoPartyError};
+use crate::ChosenHash;
 use crate::generic::clamping_seed;
 use crate::generic::share::Ed25519Share;
 use crate::keygen::party1::{Party1KeygenMsg1, Party1KeygenMsg2};
@@ -50,10 +51,8 @@ pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Part
     };
 
     // verify x1's d_log_proof_blind
-    let Q_hash_commitment = &msg1.Q_hash_commitment;
-    let R_hash_commitment = &msg1.R_hash_commitment;
     let d_log_witness = msg2.x1_d_log_witness;
-    let flag = d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
+    let flag = d_log_witness.verify(msg1, None);
     if !flag {
         error.reason = "fail to verify x1's d_log_proof_blind".to_string();
         return Err(error);
@@ -62,7 +61,7 @@ pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Part
     // calc share
     let Q1 = d_log_witness.d_log_proof.Q;
     let Q2 = assets.Q2;
-    let agg_hash_Q: Scalar<Ed25519> = sha3::Keccak512::new()
+    let agg_hash_Q: Scalar<Ed25519> = ChosenHash::new()
         .chain_point(&Q1)
         .chain_point(&Q2)
         .result_scalar();

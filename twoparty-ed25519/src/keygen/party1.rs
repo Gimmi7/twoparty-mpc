@@ -3,6 +3,7 @@ use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use serde::{Deserialize, Serialize};
 use common::dlog::{CurveKeyPair, DLogCommitment, DLogWitness};
 use common::errors::{SCOPE_EDDSA_ED25519, TwoPartyError};
+use crate::ChosenHash;
 use crate::generic::clamping_seed;
 use crate::generic::share::Ed25519Share;
 use crate::keygen::party2::{Party2KeygenMsg1, Party2KeygenMsg2};
@@ -57,7 +58,7 @@ pub fn party1_step2(msg1: Party2KeygenMsg1, assets: Party1InitAssets) -> Result<
     // calc share
     let Q1 = &assets.Q1;
     let Q2 = peer_d_log_proof.Q;
-    let agg_hash_Q: Scalar<Ed25519> = sha3::Keccak512::new()
+    let agg_hash_Q: Scalar<Ed25519> = ChosenHash::new()
         .chain_point(Q1)
         .chain_point(&Q2)
         .result_scalar();
@@ -69,7 +70,7 @@ pub fn party1_step2(msg1: Party2KeygenMsg1, assets: Party1InitAssets) -> Result<
         x: assets.x1,
         agg_hash_Q,
         agg_Q: agg_Q.clone(),
-        agg_Q_minus: agg_Q_minus.clone(),
+        agg_Q_minus,
     };
 
     let party1_keygen_msg2 = Party1KeygenMsg2 {

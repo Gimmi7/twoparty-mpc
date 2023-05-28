@@ -40,9 +40,7 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
 
     let d_log_witness = party1_keygen_msg2.d_log_witness;
     // verify x1 d_log_proof_blind
-    let Q_hash_commitment = &party1_keygen_msg1.Q_hash_commitment;
-    let R_hash_commitment = &party1_keygen_msg1.R_hash_commitment;
-    let flag = d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
+    let flag = d_log_witness.verify(party1_keygen_msg1, None);
     if !flag {
         error.reason = "fail to verify x1 blind d_log_proof".to_string();
         return Err(error);

@@ -172,10 +172,10 @@ fn export_private(share1: &Party1Share, share2: &Party2Share) -> BigInt {
     let challenge = party2_export_msg1.challenge.clone();
 
     // party1 step2
-    let party1_export_msg2 = export::party1::party1_step2(party2_export_msg1, &share1);
+    let party1_export_msg2 = export::party1::party1_step2(party2_export_msg1, share1);
 
     // party2 step2
-    let party2_result2 = export::party2::party2_step2(party1_export_msg2, &challenge, &share2);
+    let party2_result2 = export::party2::party2_step2(party1_export_msg2, &challenge, share2);
     if party2_result2.is_err() {
         println!("{}", party2_result2.err().unwrap());
         panic!("")
@@ -183,7 +183,7 @@ fn export_private(share1: &Party1Share, share2: &Party2Share) -> BigInt {
     let party2_export_msg2 = party2_result2.unwrap();
 
     // party1 step3
-    let party1_result3 = export::party1::party1_step3(party2_export_msg2, &share1);
+    let party1_result3 = export::party1::party1_step3(party2_export_msg2, share1);
     if party1_result3.is_err() {
         println!("{}", party1_result3.err().unwrap());
         panic!("")

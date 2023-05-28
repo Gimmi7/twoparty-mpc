@@ -48,9 +48,8 @@ pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1Si
 
     let d_log_witness = party1_sign_msg2.d_log_witness;
     // verify ephemeral d_log_proof_blind
-    let Q_hash_commitment = &party1_sign_msg1.Q_hash_commitment;
-    let R_hash_commitment = &party1_sign_msg1.R_hash_commitment;
-    let flag = d_log_witness.verify(Q_hash_commitment, R_hash_commitment, None);
+
+    let flag = d_log_witness.verify(party1_sign_msg1, None);
     if !flag {
         error.reason = "fail to very ephemeral d_log_proof_blind".to_string();
         return Err(error);

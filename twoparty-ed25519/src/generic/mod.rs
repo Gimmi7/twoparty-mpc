@@ -1,6 +1,7 @@
+use curv::cryptographic_primitives::hashing::Digest;
 use curv::elliptic::curves::{Ed25519, Scalar};
 use rand::Rng;
-use sha3::Digest;
+use crate::ChosenHash;
 
 pub mod share;
 
@@ -8,7 +9,7 @@ pub mod share;
 pub fn clamping_seed() -> (Scalar<Ed25519>, [u8; 32]) {
     let seed: [u8; 32] = rand::thread_rng().gen();
     // expand the seed to 64 bytes
-    let h = sha3::Keccak512::digest(&seed[..]);
+    let h = ChosenHash::digest(&seed[..]);
 
     // convert the low half to a ed25519 scalar
     let x = {

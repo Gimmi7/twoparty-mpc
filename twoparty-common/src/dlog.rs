@@ -156,7 +156,7 @@ impl<C: Curve> CurveKeyPair<C> {
 }
 
 impl<C: Curve> DLogWitness<C> {
-    pub fn verify(&self, Q_hash_commitment: &BigInt, R_hash_commitment: &BigInt, challenge: Option<&BigInt>) -> bool {
+    pub fn verify(&self, commitment: DLogCommitment, challenge: Option<&BigInt>) -> bool {
         let Q = &self.d_log_proof.Q;
         let R = &self.d_log_proof.R;
         // verify Q_hash_commitment
@@ -164,7 +164,7 @@ impl<C: Curve> DLogWitness<C> {
             &BigInt::from_bytes(Q.to_bytes(false).as_ref()),
             &self.Q_blind_factor,
         );
-        if Q_test != Q_hash_commitment.clone() {
+        if Q_test != commitment.Q_hash_commitment {
             return false;
         }
         // verify R_hash_commitment
@@ -172,7 +172,7 @@ impl<C: Curve> DLogWitness<C> {
             &BigInt::from_bytes(R.to_bytes(false).as_ref()),
             &self.R_blind_factor,
         );
-        if R_test != R_hash_commitment.clone() {
+        if R_test != commitment.R_hash_commitment {
             return false;
         }
         // verify d_log_proof
