@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 
-extern crate core;
 
 type ChosenHash= sha2::Sha512;
 

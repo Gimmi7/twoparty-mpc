@@ -1,6 +1,6 @@
+mod sui_verify;
 
-
-
+use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use crate::generic::share::Ed25519Share;
 use crate::keygen;
 use crate::sign::{self, EdDSASignature};
@@ -101,4 +101,18 @@ pub fn sign_message(share1: &Ed25519Share, share2: &Ed25519Share, message_digest
 }
 
 
+#[test]
+fn test_normal_agg() {
+    let x1 = Scalar::<Ed25519>::random();
+    let x2 = Scalar::<Ed25519>::random();
+    let x12 = &x1 + &x2;
 
+    let G = Point::<Ed25519>::generator();
+    let Q1 = &x1 * G;
+    let Q2 = &x2 * G;
+    let Q12 = x12 * G;
+    let agg_Q = &Q1 + &Q2;
+
+    println!("{:?}", Q12.x_coord().unwrap());
+    println!("{:?}", agg_Q.x_coord().unwrap());
+}

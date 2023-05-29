@@ -5,9 +5,15 @@ use crate::ChosenHash;
 
 pub mod share;
 
-// https://www.jcraige.com/an-explainer-on-ed25519-clamping
-pub fn clamping_seed() -> (Scalar<Ed25519>, [u8; 32]) {
+pub fn clamping_seed() -> (Scalar<Ed25519>, [u8; 32], [u8; 32]) {
     let seed: [u8; 32] = rand::thread_rng().gen();
+    let (x, prefix) = clamping_with_seed(&seed);
+    (x, prefix, seed)
+}
+
+
+// https://www.jcraige.com/an-explainer-on-ed25519-clamping
+pub fn clamping_with_seed(seed: &[u8; 32]) -> (Scalar<Ed25519>, [u8; 32]) {
     // expand the seed to 64 bytes
     let h = ChosenHash::digest(&seed[..]);
 
@@ -32,3 +38,4 @@ pub fn clamping_seed() -> (Scalar<Ed25519>, [u8; 32]) {
 
     (x, prefix)
 }
+

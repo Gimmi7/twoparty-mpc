@@ -1,3 +1,5 @@
+use curv::arithmetic::Converter;
+use curv::BigInt;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use curv::elliptic::curves::{Ed25519, Scalar};
 use serde::{Deserialize, Serialize};
@@ -16,11 +18,15 @@ pub struct Party2SignMsg1 {
 pub fn party2_step1(msg1: Party1SignMsg1, share: &Ed25519Share) -> (Party2SignMsg1, CurveKeyPair<Ed25519>) {
     // https://github.com/MystenLabs/ed25519-unsafe-libs
     // we external hash agg_Q to avoid double public key oracle attack
-    let ri: Scalar<Ed25519> = ChosenHash::new()
+    let mut ri_hash = ChosenHash::new()
         .chain(share.prefix)
-        .chain_point(&share.agg_Q)
         .chain(msg1.message_digest)
-        .result_scalar();
+        .chain_point(&share.agg_Q)
+        .finalize();
+    // reverse because BigInt uses big-endian
+    ri_hash.reverse();
+    let ri=Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&ri_hash));
+
     let (eph_keypair, eph_proof) = CurveKeyPair::generate_keypair_and_d_log_proof_with_x(&ri);
     (
         Party2SignMsg1 {

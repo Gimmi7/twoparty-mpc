@@ -18,7 +18,7 @@ pub struct Party1InitAssets {
 }
 
 pub fn party1_step1() -> (Party1KeygenMsg1, Party1InitAssets) {
-    let (x1, prefix) = clamping_seed();
+    let (x1, prefix, _seed) = clamping_seed();
     let (keypair, x1_d_log_commitment, x1_d_log_witness) = CurveKeyPair::generate_keypair_and_blind_d_log_proof_with_x(&x1);
 
     let party1_keygen_msg1 = x1_d_log_commitment;
