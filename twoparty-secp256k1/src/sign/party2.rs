@@ -75,7 +75,8 @@ pub fn party2_step2(party1_sign_msg2: Party1SignMsg2, party1_sign_msg1: Party1Si
     let k2_inv = BigInt::mod_inv(&k2.to_bigint(), q).unwrap();
     let rho = BigInt::sample_below(&q.pow(2));
 
-    let partial_sig = rho * q.clone() + BigInt::mod_mul(&k2_inv, &message_digest, q);
+    let msg_bn=BigInt::from_bytes(&message_digest);
+    let partial_sig = rho * q.clone() + BigInt::mod_mul(&k2_inv, &msg_bn, q);
     let c1 = Paillier::encrypt(&party2_share.public.paillier_ek, RawPlaintext::from(partial_sig));
 
     let k2_inv_r_x2 = BigInt::mod_mul(

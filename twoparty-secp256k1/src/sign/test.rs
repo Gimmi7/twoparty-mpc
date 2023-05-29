@@ -2,7 +2,6 @@ use curv::arithmetic::Integer;
 use curv::BigInt;
 
 
-
 use crate::tests;
 
 #[test]
@@ -14,7 +13,7 @@ fn test_sign() {
 
     println!("===============================");
 
-    let message_digest = BigInt::from(1234);
+    let message_digest = vec![1, 2, 3, 4];
     let sig = tests::sign_message(&share1, &share2, &message_digest);
 
     println!("sig={:?}", sig)
@@ -27,10 +26,10 @@ pub fn sign_for_recovery() {
     let x2 = &share2.private.x2;
     let x = (x1 * x2).to_bigint();
 
-    let digest = BigInt::from(1234);
+    let digest = vec![1, 2, 3, 4];
     let sig = tests::sign_message(&share1, &share2, &digest);
     println!("x={}", x);
-    println!("digest={}", digest);
+    println!("digest={:?}", digest);
     println!("r={}", &sig.r);
     println!("s={}", &sig.s);
     println!("v={}", &sig.v);

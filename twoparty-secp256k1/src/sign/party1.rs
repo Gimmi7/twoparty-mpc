@@ -30,11 +30,11 @@ pub fn party1_step1() -> (Party1SignMsg1, DLogWitness<Secp256k1>, CurveKeyPair<S
 pub struct Party1SignMsg2 {
     // d_log_witness for ephemeral k1
     pub d_log_witness: DLogWitness<Secp256k1>,
-    pub message_digest: BigInt,
+    pub message_digest: Vec<u8>,
     pub x1_d_log_proof: DLogProof<Secp256k1>,
 }
 
-pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness<Secp256k1>, message_digest: &BigInt, eph_keypair: &CurveKeyPair<Secp256k1>, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
+pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness<Secp256k1>, message_digest: &Vec<u8>, eph_keypair: &CurveKeyPair<Secp256k1>, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -73,7 +73,7 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 
 
 // compute signature with encrypted_partial_s
-pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: CurveKeyPair<Secp256k1>, message_hash: &BigInt, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
+pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: CurveKeyPair<Secp256k1>, message_hash: &Vec<u8>, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -128,7 +128,7 @@ pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share
 pub fn verify_signature(
     signature: &ECDSASignature,
     pub_key: &Point<Secp256k1>,
-    message_hash: &BigInt,
+    message_digest: &Vec<u8>,
 ) -> bool {
     let q = Scalar::<Secp256k1>::group_order();
     let G = Point::<Secp256k1>::generator();
@@ -137,7 +137,8 @@ pub fn verify_signature(
     let s_fe = Scalar::<Secp256k1>::from(&signature.s);
 
     let s_inv_fe = s_fe.invert().unwrap();
-    let msg_fe = Scalar::<Secp256k1>::from(message_hash.mod_floor(q));
+    let msg_bn = BigInt::from_bytes(message_digest);
+    let msg_fe = Scalar::<Secp256k1>::from(msg_bn.mod_floor(q));
 
     let u1 = &s_inv_fe * msg_fe * G;
     let u2 = &s_inv_fe * r_fe * pub_key;
