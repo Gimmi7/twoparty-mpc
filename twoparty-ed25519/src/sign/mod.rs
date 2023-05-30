@@ -33,7 +33,7 @@ impl PartialSigningParams {
             .finalize();
         // reverse because BigInt uses big-endian
         k_hash.reverse();
-        let k=Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&k_hash));
+        let k = Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&k_hash));
 
         let s = self.ri + k * &share.x * &share.agg_hash_Q;
         EdDSASignature {
@@ -74,11 +74,18 @@ impl EdDSASignature {
         // reverse because BigInt uses big-endian
         k_hash.reverse();
 
-        let k=Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&k_hash));
+        let k = Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&k_hash));
 
         let G = Point::<Ed25519>::generator();
         let R_test = (k * &share.agg_Q_minus) + &self.s * G;
         (&self.R - R_test).mul(Scalar::from(8)).is_zero()
+    }
+
+    pub fn to_sig_bytes(&self) -> [u8; 64] {
+        let mut sig_bytes = [0u8; 64];
+        sig_bytes[..32].copy_from_slice(self.R.to_bytes(true).as_ref());
+        sig_bytes[32..].copy_from_slice(self.s.to_bytes().as_ref());
+        sig_bytes
     }
 }
 

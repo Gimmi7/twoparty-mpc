@@ -17,7 +17,7 @@ fn integrated_test_ed25519() {
     // sign
     let message_digest = vec![1, 2, 3, 4];
     let sig = sign_message(&share1, &share2, &message_digest);
-    println!("{:?}", sig);
+    println!("{:?}", sig.to_sig_bytes());
     println!("sign success ======================");
 }
 

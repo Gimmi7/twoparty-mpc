@@ -1,3 +1,5 @@
+use curv::arithmetic::Converter;
+use curv::BigInt;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use serde::{Deserialize, Serialize};
@@ -58,19 +60,21 @@ pub fn party1_step2(msg1: Party2KeygenMsg1, assets: Party1InitAssets) -> Result<
     // calc share
     let Q1 = &assets.Q1;
     let Q2 = peer_d_log_proof.Q;
-    let agg_hash_Q: Scalar<Ed25519> = ChosenHash::new()
+    let agg_hash = ChosenHash::new()
         .chain_point(Q1)
         .chain_point(&Q2)
-        .result_scalar();
+        .finalize();
+    // ensure that x= agg_hash_Q(x1+x2) is a multiple of cofactor
+    let agg_hash_Q = Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&agg_hash)) * Scalar::<Ed25519>::from(8);
+
     let agg_Q = (&agg_hash_Q * Q1) + (&agg_hash_Q * Q2);
-    let agg_Q_minus = -&agg_Q;
 
     let pending_share = Ed25519Share {
         prefix: assets.prefix,
         x: assets.x1,
         agg_hash_Q,
         agg_Q: agg_Q.clone(),
-        agg_Q_minus,
+        agg_Q_minus: (-&agg_Q),
     };
 
     let party1_keygen_msg2 = Party1KeygenMsg2 {
