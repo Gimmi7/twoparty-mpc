@@ -12,13 +12,13 @@ way. They just need to auth with their web2 social account.(e.g. google auth, ap
 
 The rationale of binding:
 
-**generate phase**
+**generating phase**
 
 * for each identity id, mpc-server will generate an identity-secret for it
 * mpc-client encrypt identity-secret & share with aws kms,
   then send (Enc(identity-secret), Enc(share)) to mpc-server.
 
-**recovery phase**
+**recovering phase**
 
 * mpc-client first get the Enc(identity-secret) from mpc-server, then decrypt it with aws kms
 * mpc-client generate a proof to convince mpc-server it has successfully decrypted the Enc(identity-secret)

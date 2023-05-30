@@ -122,7 +122,7 @@ pub fn rotate_share(share1: &Ed25519Share, share2: &Ed25519Share) -> (Ed25519Sha
         party2_rotate_msg1,
         delta_witness,
         delta_keypair1,
-        &share1,
+        share1,
     );
     if party1_result2.is_err() {
         println!("{}", party1_result2.err().unwrap());
@@ -135,7 +135,7 @@ pub fn rotate_share(share1: &Ed25519Share, share2: &Ed25519Share) -> (Ed25519Sha
         party1_rotate_msg2,
         party1_rotate_msg1,
         delta_keypair2,
-        &share2,
+        share2,
     );
     if party2_result2.is_err() {
         println!("{}", party2_result2.err().unwrap());
@@ -148,7 +148,7 @@ pub fn rotate_share(share1: &Ed25519Share, share2: &Ed25519Share) -> (Ed25519Sha
     let party1_result3 = rotate::party1::party1_step3(
         party2_rotate_msg2,
         new_x1,
-        &share1,
+        share1,
     );
     if party1_result3.is_err() {
         println!("{}", party1_result3.err().unwrap());
