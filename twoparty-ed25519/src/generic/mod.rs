@@ -39,3 +39,20 @@ pub fn clamping_with_seed(seed: &[u8; 32]) -> (Scalar<Ed25519>, [u8; 32]) {
     (x, prefix)
 }
 
+#[cfg(test)]
+mod test {
+    use crate::generic::clamping_seed;
+
+    #[test]
+    fn test_clamping() {
+        for _i in 1..=100 {
+            let (x, _prefix, _seed) = clamping_seed();
+            let first_byte = x.to_bytes()[0];
+            let last_byte = x.to_bytes()[31];
+            if first_byte > 248 || last_byte > 127 {
+                panic!("clamping bug")
+            }
+        }
+        println!("pass through clamping test");
+    }
+}

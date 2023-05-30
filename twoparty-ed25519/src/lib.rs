@@ -10,3 +10,4 @@ mod tests;
 pub mod keygen;
 pub mod generic;
 pub mod sign;
+pub mod rotate;

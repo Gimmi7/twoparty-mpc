@@ -64,8 +64,7 @@ pub fn party1_step2(msg1: Party2KeygenMsg1, assets: Party1InitAssets) -> Result<
         .chain_point(Q1)
         .chain_point(&Q2)
         .finalize();
-    // ensure that x= agg_hash_Q(x1+x2) is a multiple of cofactor
-    let agg_hash_Q = Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&agg_hash)) * Scalar::<Ed25519>::from(8);
+    let agg_hash_Q = Scalar::<Ed25519>::from_bigint(&BigInt::from_bytes(&agg_hash));
 
     let agg_Q = (&agg_hash_Q * Q1) + (&agg_hash_Q * Q2);
 
