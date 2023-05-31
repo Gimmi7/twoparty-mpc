@@ -6,3 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true, features = ["sink", "std"] }
+url = "2.3.1"
+tokio = { workspace = true, features = ["full"] }

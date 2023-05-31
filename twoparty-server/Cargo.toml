@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true, features = ["sink", "std"] }
 clap = { version = "4.3.0", features = ["derive"] }
 include_dir = "0.7.3"
 serde = { workspace = true, features = ["derive"] }

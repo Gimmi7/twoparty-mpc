@@ -1,21 +1,20 @@
 #![feature(once_cell_try)]
 
 use clap::Parser;
-use tracing::{debug, error, info, warn};
+
 use crate::config::{AppConfig, CliArgs, log_config};
+use crate::websocket::launch_server;
 
 pub mod config;
+pub mod websocket;
 
 #[tokio::main]
 async fn main() {
     let cli_args = CliArgs::parse();
     std::env::set_var("ENV", cli_args.env);
 
-    let app_config = AppConfig::get_app_config();
+    let _app_config = AppConfig::get_app_config();
     let _guard = log_config();
 
-    debug!("debug debug");
-    info!("hello {:?}", app_config);
-    warn!("warn warn");
-    error!("error error");
+    launch_server().await;
 }

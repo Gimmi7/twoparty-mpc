@@ -15,7 +15,7 @@ pub const RESOURCES_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/resourc
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about)]
 pub struct CliArgs {
-    #[arg(long, default_value = "test")]
+    #[clap(long, default_value = "test")]
     pub env: String,
 }
 
