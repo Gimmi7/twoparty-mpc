@@ -131,7 +131,7 @@ pub fn party1_step3(party2_rotate_msg2: Party2RotateMsg2, pending_share: Party1S
     // check if the pub_key is the same as old
     let x1_new = &pending_share.private.x1;
     let pub_new = x1_new * &new_x2_proof.Q;
-    if &pub_new != &pending_share.public.pub_key {
+    if pub_new != pending_share.public.pub_key {
         error.reason = "new public key is not the same as old".to_string();
         return Err(error);
     }

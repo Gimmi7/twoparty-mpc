@@ -34,7 +34,7 @@ pub struct Party1SignMsg2 {
     pub x1_d_log_proof: DLogProof<Secp256k1>,
 }
 
-pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness<Secp256k1>, message_digest: &Vec<u8>, eph_keypair: &CurveKeyPair<Secp256k1>, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
+pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness<Secp256k1>, message_digest: &[u8], eph_keypair: &CurveKeyPair<Secp256k1>, share: &Party1Share) -> Result<(Party1SignMsg2, Point<Secp256k1>), TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -64,7 +64,7 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
     Ok((
         Party1SignMsg2 {
             d_log_witness,
-            message_digest: message_digest.clone(),
+            message_digest: message_digest.to_owned(),
             x1_d_log_proof,
         },
         k2_G.clone()
@@ -73,7 +73,7 @@ pub fn party1_step2(party2_sign_msg1: Party2SignMsg1, d_log_witness: DLogWitness
 
 
 // compute signature with encrypted_partial_s
-pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: CurveKeyPair<Secp256k1>, message_hash: &Vec<u8>, k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
+pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share, eph_keypair: CurveKeyPair<Secp256k1>, message_hash: &[u8], k2_G: Point<Secp256k1>) -> Result<ECDSASignature, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 1,
@@ -128,7 +128,7 @@ pub fn party1_step3(party2_sign_msg2: Party2SignMsg2, party1_share: &Party1Share
 pub fn verify_signature(
     signature: &ECDSASignature,
     pub_key: &Point<Secp256k1>,
-    message_digest: &Vec<u8>,
+    message_digest: &[u8],
 ) -> bool {
     let q = Scalar::<Secp256k1>::group_order();
     let G = Point::<Secp256k1>::generator();

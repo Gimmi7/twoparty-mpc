@@ -47,8 +47,8 @@ impl<C: Curve> DLogProof<C> {
             .chain_point(&R)
             .chain_point(&G.to_point())
             .chain_point(&Q);
-        if challenge.is_some() {
-            hash = hash.chain_bigint(challenge.unwrap());
+        if let Some(challenge_value) = challenge {
+            hash = hash.chain_bigint(challenge_value);
         }
         let e: Scalar<C> = hash.result_scalar();
 
@@ -69,8 +69,8 @@ impl<C: Curve> DLogProof<C> {
             .chain_point(&self.R)
             .chain_point(&G.to_point())
             .chain_point(&self.Q);
-        if challenge.is_some() {
-            hash = hash.chain_bigint(challenge.unwrap());
+        if let Some(challenge_value)=challenge{
+            hash = hash.chain_bigint(challenge_value);
         }
         let e: Scalar<C> = hash.result_scalar();
 

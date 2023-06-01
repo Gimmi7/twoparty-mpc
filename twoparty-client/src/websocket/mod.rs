@@ -5,7 +5,7 @@ use tokio_tungstenite::{connect_async, tungstenite};
 use tokio_tungstenite::tungstenite::{Error, Message};
 use url::Url;
 
-async fn connect_server() -> tungstenite::Result<()> {
+pub async fn connect_server() -> tungstenite::Result<()> {
     let (ws_stream, _) = connect_async(
         Url::parse("ws://localhost:8822/ws").expect("Can't connect to server")
     ).await?;

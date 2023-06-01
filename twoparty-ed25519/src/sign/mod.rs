@@ -44,11 +44,11 @@ impl PartialSigningParams {
 }
 
 
-pub fn add_signature_parts(sigs: &[EdDSASignature]) -> Result<EdDSASignature, ()> {
+pub fn add_signature_parts(sigs: &[EdDSASignature]) -> Result<EdDSASignature, String> {
     //test equality of group elements:
     let all_R_eq = sigs[1..].iter().all(|sig| sig.R == sigs[0].R);
     if !all_R_eq {
-        return Err(());
+        return Err("ephemeral random: R1 not eq equal to R2".to_string());
     }
 
     //sum s part of the signature:

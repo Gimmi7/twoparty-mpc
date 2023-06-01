@@ -64,7 +64,7 @@ pub fn full_keygen() -> (Party1Share, Party2Share) {
     (party1_share, party2_share)
 }
 
-pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_digest: &Vec<u8>) -> ECDSASignature {
+pub fn sign_message(share1: &Party1Share, share2: &Party2Share, message_digest: &[u8]) -> ECDSASignature {
     // party1 step1
     let (
         party1_sign_msg1,

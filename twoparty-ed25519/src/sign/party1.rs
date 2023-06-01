@@ -46,7 +46,7 @@ pub struct Party1SignMsg2 {
     pub partial_sig: EdDSASignature,
 }
 
-pub fn party1_step2(msg1: Party2SignMsg1, eph_witness: DLogWitness<Ed25519>, message_digest: &Vec<u8>, eph_keypair: CurveKeyPair<Ed25519>, share: &Ed25519Share) -> Result<Party1SignMsg2, TwoPartyError> {
+pub fn party1_step2(msg1: Party2SignMsg1, eph_witness: DLogWitness<Ed25519>, message_digest: &[u8], eph_keypair: CurveKeyPair<Ed25519>, share: &Ed25519Share) -> Result<Party1SignMsg2, TwoPartyError> {
     let mut error = TwoPartyError {
         scope: SCOPE_EDDSA_ED25519.to_string(),
         party: 1,
@@ -69,7 +69,7 @@ pub fn party1_step2(msg1: Party2SignMsg1, eph_witness: DLogWitness<Ed25519>, mes
 
     let sign_params = PartialSigningParams {
         agg_R,
-        message_digest: message_digest.clone(),
+        message_digest: message_digest.to_owned(),
         ri: eph_keypair.secret,
     };
     let partial_sig = sign_params.partial_sign(share);
