@@ -27,6 +27,8 @@ tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = "0.3.17"
 tokio = "1.28.2"
+#axum = "0.6.18"
+axum={git="https://github.com/tokio-rs/axum", rev="eafee2d2f40df82c5ac9016bf27d0d9ffe8bfe7b"}
 
 [patch.crates-io]
 curv-kzen = { git = "https://github.com/Gimmi7/curv-cy", rev = "906ad3a349a49d16c378d1c9b22e6cef8427d886" }

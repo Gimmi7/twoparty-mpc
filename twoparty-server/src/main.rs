@@ -3,10 +3,12 @@
 use clap::Parser;
 
 use crate::config::{AppConfig, CliArgs, log_config};
-use crate::websocket::launch_server;
+use crate::controller::launch_axum;
+
 
 pub mod config;
 pub mod websocket;
+pub mod controller;
 
 #[tokio::main]
 async fn main() {
@@ -16,5 +18,9 @@ async fn main() {
     let _app_config = AppConfig::get_app_config();
     let _guard = log_config();
 
-    launch_server().await;
+
+    // launch_server().await;
+    launch_axum().await;
 }
+
+

@@ -7,6 +7,7 @@ use tracing_appender::non_blocking::{WorkerGuard};
 
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, Registry};
+use tracing_subscriber::fmt::TestWriter;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 
@@ -21,7 +22,7 @@ pub struct CliArgs {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppConfig {
-    pub server_port: i32,
+    pub server_port: u16,
     pub env: String,
 }
 
@@ -70,7 +71,7 @@ pub fn log_config() -> Vec<WorkerGuard> {
         let registry = Registry::default()
             .with(fmt::Layer::default().with_writer(info_writer.with_max_level(Level::INFO)))
             .with(fmt::Layer::default().with_writer(err_writer.with_max_level(Level::WARN)))
-            .with(fmt::Layer::default().with_test_writer());
+            .with(fmt::Layer::default().with_writer(TestWriter::default().with_max_level(Level::INFO)));
         tracing::subscriber::set_global_default(registry).expect("fail to set tracing subscriber");
     }
 
