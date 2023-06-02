@@ -8,9 +8,9 @@ use crate::export;
 
 #[test]
 fn integrated_test() {
-    // keygen
+    // Keygen
     let (share1, share2) = full_keygen();
-    println!("keygen success!");
+    println!("Keygen success!");
     // get private key
     let x = export_private(&share1, &share2);
     println!("x={}", x);

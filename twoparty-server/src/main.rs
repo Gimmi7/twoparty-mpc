@@ -1,4 +1,5 @@
 #![feature(once_cell_try)]
+#![feature(lazy_cell)]
 
 use clap::Parser;
 
@@ -10,6 +11,8 @@ pub mod config;
 pub mod websocket;
 pub mod controller;
 
+// https://github.com/tokio-rs/tokio/discussions/3858
+// tokio: worker-threads= cpu_num,  blocking-threads: create-on-demand with upper limit=500
 #[tokio::main]
 async fn main() {
     let cli_args = CliArgs::parse();
@@ -18,8 +21,7 @@ async fn main() {
     let _app_config = AppConfig::get_app_config();
     let _guard = log_config();
 
-
-    // launch_server().await;
+    // launch http & websocket server
     launch_axum().await;
 }
 

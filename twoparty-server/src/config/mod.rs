@@ -24,6 +24,8 @@ pub struct CliArgs {
 pub struct AppConfig {
     pub server_port: u16,
     pub env: String,
+    pub ws_server_idle: u8,
+    pub ws_client_interval: u8,
 }
 
 // rust static vs const

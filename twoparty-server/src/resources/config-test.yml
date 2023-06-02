@@ -1,3 +1,4 @@
 server_port: 8822
 env: "test"
-another_test: "another_test"
+ws_server_idle: 15
+ws_client_interval: 10

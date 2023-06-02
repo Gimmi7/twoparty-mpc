@@ -47,7 +47,7 @@ pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Part
     let mut error = TwoPartyError {
         scope: SCOPE_EDDSA_ED25519.to_string(),
         party: 2,
-        action: "keygen".to_string(),
+        action: "Keygen".to_string(),
         step: 2,
         reason: "".to_string(),
     };

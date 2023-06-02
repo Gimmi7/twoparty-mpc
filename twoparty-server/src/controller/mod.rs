@@ -1,3 +1,5 @@
+mod ws_config;
+
 use std::net::{SocketAddr};
 use axum::{Router};
 use axum::routing::{get};
@@ -19,6 +21,7 @@ fn build_router() -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/ws", get(ws_handler))
+        .route("/ws-config", get(ws_config::ws_config))
 }
 
 async fn health() -> String {

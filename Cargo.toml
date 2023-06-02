@@ -32,3 +32,4 @@ axum={git="https://github.com/tokio-rs/axum", rev="eafee2d2f40df82c5ac9016bf27d0
 
 [patch.crates-io]
 curv-kzen = { git = "https://github.com/Gimmi7/curv-cy", rev = "906ad3a349a49d16c378d1c9b22e6cef8427d886" }
+

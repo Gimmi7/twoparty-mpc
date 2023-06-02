@@ -45,7 +45,7 @@ pub fn party1_step2(msg1: Party2KeygenMsg1, assets: Party1InitAssets) -> Result<
     let mut error = TwoPartyError {
         scope: SCOPE_EDDSA_ED25519.to_string(),
         party: 1,
-        action: "keygen".to_string(),
+        action: "Keygen".to_string(),
         step: 2,
         reason: "".to_string(),
     };
@@ -91,7 +91,7 @@ pub fn party1_step3(msg2: Party2KeygenMsg2, pending_share: Ed25519Share) -> Resu
     let mut error = TwoPartyError {
         scope: SCOPE_EDDSA_ED25519.to_string(),
         party: 1,
-        action: "keygen".to_string(),
+        action: "Keygen".to_string(),
         step: 3,
         reason: "".to_string(),
     };

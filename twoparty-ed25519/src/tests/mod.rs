@@ -9,9 +9,9 @@ use crate::sign::{self, EdDSASignature};
 
 #[test]
 fn integrated_test_ed25519() {
-    // keygen
+    // Keygen
     let (share1, share2) = full_keygen();
-    println!("keygen success ======================");
+    println!("Keygen success ======================");
 
     // sign
     let message_digest = vec![1, 2, 3, 4];

@@ -9,7 +9,9 @@ edition = "2021"
 serde.workspace = true
 curv-kzen.workspace = true
 sha3.workspace = true
-
+hex.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+serde_json.workspace = true
 
 
 

@@ -33,7 +33,7 @@ pub fn party2_step2(party1_keygen_msg2: Party1KeygenMsg2, party1_keygen_msg1: Pa
     let mut error = TwoPartyError {
         scope: SCOPE_ECDSA_SECP256K1.to_string(),
         party: 2,
-        action: "keygen".to_string(),
+        action: "Keygen".to_string(),
         step: 2,
         reason: "".to_string(),
     };

@@ -10,3 +10,4 @@ tokio-tungstenite = { workspace = true }
 futures-util = { workspace = true, features = ["sink", "std"] }
 url = "2.3.1"
 tokio = { workspace = true, features = ["full"] }
+common.workspace = true
