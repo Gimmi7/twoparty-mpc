@@ -59,6 +59,7 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
 
                 let msg_result = msg_option.unwrap();
                 if msg_result.is_err() {
+                    // Connection reset without closing handshake
                     let e = msg_result.err().unwrap();
                     error!("Error processing inbound message: {}", e);
                     continue;
@@ -83,6 +84,9 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
                         drop_producer(&connection_id).await;
                         info!("client proactive close the connection:{:?}", option);
                         return;
+                    }
+                    Message::Ping(_) => {
+                        info!("server get ping");
                     }
                     _other => {}
                 }

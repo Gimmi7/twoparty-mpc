@@ -1,5 +1,5 @@
 use std::error;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use serde::Serialize;
 
 pub const SCOPE_ECDSA_SECP256K1: &str = "ecdsa-secp256k1";
@@ -21,3 +21,17 @@ impl Display for TwoPartyError {
 }
 
 impl error::Error for TwoPartyError {}
+
+
+
+
+#[derive(Debug)]
+pub struct GenericError(pub String);
+
+impl Display for GenericError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl error::Error for GenericError {}
