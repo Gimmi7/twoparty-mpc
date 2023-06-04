@@ -1,10 +1,10 @@
-use super::ecdsa;
+use super::secp256k1;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_secp256k1_ecdsa() {
     let identity_id = "wangcy";
     let url = "ws://localhost:8822/ws";
-    let saved_share = ecdsa::keygen(identity_id.to_string(), url.to_string()).await.unwrap();
+    let saved_share = secp256k1::keygen(identity_id.to_string(), url.to_string()).await.unwrap();
     println!("{}", serde_json::to_string(&saved_share).unwrap());
 }
 

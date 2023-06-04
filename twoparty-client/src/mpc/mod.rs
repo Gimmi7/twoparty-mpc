@@ -3,7 +3,8 @@ use common::socketmsg::{MsgWrapper, REQ_CODE_MPC22, RSP_CODE_SUCCESS};
 use common::socketmsg::types::Mpc22Msg;
 use crate::websocket::SyncClient;
 
-pub mod ecdsa;
+pub mod secp256k1;
+pub mod ed25519;
 #[cfg(test)]
 mod test;
 

@@ -2,6 +2,7 @@ package twoparty.mpc;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,6 +16,13 @@ public class Main {
 
         System.load(libPath);
 
-        NativeMpc.ecdsaKeygen();
+        String identity_id = "wangcy";
+        String ws_url = "ws://localhost:8822/ws";
+        byte[][] result = NativeMpc.seec256k1Keygen(identity_id, ws_url);
+        if (result.length == 2) {
+            System.out.println(new String(result[1]));
+            return;
+        }
+        System.out.println(Arrays.toString(result[0]));
     }
 }

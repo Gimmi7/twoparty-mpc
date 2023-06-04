@@ -56,6 +56,7 @@ pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLo
 
             let share_id_bytes = serde_json::to_vec(&share_id).unwrap();
             inbound.success_rsp(Some(share_id_bytes)).await;
+            info!("secp256k1_keygen step2 success");
         }
         _ => {
             inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "secp256k1_keygen max step=2".to_string()).await;
