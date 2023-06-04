@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mpc22Msg {
-    // set by server
-    pub context_id: String,
     pub command: u8,
     pub scope: u8,
     pub party: u8,

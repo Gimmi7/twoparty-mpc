@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curv-kzen.workspace = true
+curv-kzen = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
 rand.workspace = true
@@ -17,6 +17,3 @@ hex.workspace = true
 [dev-dependencies]
 fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", version = "0.1.5" }
 ed25519-consensus = { version = "2.1.0", features = ["serde"] }
-
-[features]
-default = ["curv-kzen/rust-gmp-kzen"]

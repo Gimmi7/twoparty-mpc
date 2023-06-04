@@ -1,14 +1,14 @@
 [package]
-name = "twoparty-ecdsa"
+name = "twoparty-secp256k1"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zk-paillier.workspace = true
-kzen-paillier.workspace = true
-curv-kzen.workspace = true
+zk-paillier = { workspace = true }
+kzen-paillier = { workspace = true }
+curv-kzen = { workspace = true}
 sha3.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -18,6 +18,3 @@ subtle.workspace = true
 
 
 
-
-[features]
-default = ["curv-kzen/rust-gmp-kzen"]

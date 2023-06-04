@@ -9,8 +9,12 @@ use common::socketmsg::{MsgWrapper, MSG_ACTION_RSP, RSP_CODE_SUCCESS, MSG_ACTION
 use crate::websocket::handler::mpc22_handler::mpc22_handler;
 
 
-pub async fn dispatch_inbound(msg_wrapper: MsgWrapper, tx: UnboundedSender<Message>) {
-    let inbound_with_sender = InboundWithTx { msg_wrapper: msg_wrapper.clone(), tx };
+pub async fn dispatch_inbound(msg_wrapper: MsgWrapper, tx: UnboundedSender<Message>, socket_id: String) {
+    let inbound_with_sender = InboundWithTx {
+        msg_wrapper: msg_wrapper.clone(),
+        tx,
+        socket_id,
+    };
 
     if msg_wrapper.action == MSG_ACTION_REQ {
         match msg_wrapper.action_code {
@@ -28,6 +32,7 @@ pub async fn dispatch_inbound(msg_wrapper: MsgWrapper, tx: UnboundedSender<Messa
 pub struct InboundWithTx {
     pub msg_wrapper: MsgWrapper,
     tx: UnboundedSender<Message>,
+    pub socket_id: String,
 }
 
 impl InboundWithTx {
@@ -54,10 +59,10 @@ impl InboundWithTx {
         }
     }
 
-    pub async fn success_rsp(&self, option_body: Option<&[u8]>) {
+    pub async fn success_rsp(&self, option_body: Option<Vec<u8>>) {
         let mut rsp = self.base_rsp();
         if let Some(body) = option_body {
-            rsp.body = body.to_vec();
+            rsp.body = body;
         }
         self.send_async(rsp).await;
     }

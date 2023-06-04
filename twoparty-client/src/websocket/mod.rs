@@ -30,17 +30,22 @@ pub struct SyncClient {
     pub identity_id: String,
     // send ws_message by tx
     tx: UnboundedSender<Message>,
-    // when send req_msg, send "1" by heartbeat_tx to calc heartbeat timeout
-    heartbeat_tx: UnboundedSender<u8>,
     abort_handles: Vec<AbortHandle>,
 }
 
 impl SyncClient {
-    pub async fn connect_server(identity_id: String, url: String, heartbeat_sec: u8) -> Result<Self, Box<dyn error::Error>> {
-        let parsed_url = Url::parse(&url)?;
-        let (ws_stream, _) = connect_async(
-            parsed_url
-        ).await?;
+    pub async fn connect_server(identity_id: String, url: String, heartbeat_sec: u8) -> Result<Self, String> {
+        let parsed_url_result = Url::parse(&url);
+        if parsed_url_result.is_err() {
+            return Err(parsed_url_result.unwrap_err().to_string());
+        }
+        let connect_result = connect_async(
+            parsed_url_result.unwrap()
+        ).await;
+        if connect_result.is_err() {
+            return Err(connect_result.unwrap_err().to_string());
+        }
+        let (ws_stream, _) = connect_result.unwrap();
 
         let (mut sender, mut receiver) = ws_stream.split();
         let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
@@ -76,13 +81,12 @@ impl SyncClient {
         });
 
         // spawn a task to manage ws_sender
-        let c_heartbeat_tx = heartbeat_tx.clone();
         let ws_sender_task = tokio::spawn(async move {
             loop {
                 let option_msg = rx.recv().await;
                 if option_msg.is_none() {
                     // channel closed, stop the consumer task, stop heartbeat
-                    c_heartbeat_tx.send(2).unwrap_or(());
+                    heartbeat_tx.send(2).unwrap_or(());
                     return;
                 }
                 let msg = option_msg.unwrap();
@@ -131,7 +135,6 @@ impl SyncClient {
             seq: Arc::new(Default::default()),
             identity_id,
             tx,
-            heartbeat_tx,
             abort_handles: vec![heartbeat_task.abort_handle(), ws_sender_task.abort_handle(), ws_receiver_task.abort_handle()],
             // abort_handles: vec![heartbeat_task, ws_sender_task, ws_receiver_task],
         };

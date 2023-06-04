@@ -35,10 +35,10 @@ pub async fn ws_handler(
 async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
     info!("New WebSocket connection, peer address:{}", peer);
     let app_config = AppConfig::get_app_config();
-    let connection_id = common::get_uuid();
+    let socket_id = common::get_uuid();
 
     let (sender, mut receiver) = socket.split();
-    let tx = share_ws_sender_with_channel(sender, connection_id.clone()).await;
+    let tx = share_ws_sender_with_channel(sender, socket_id.clone()).await;
     loop {
         // tungstenite-rs implements auto pong, no need to process ping,
         // but ping msg will also be bubbling to here.
@@ -47,13 +47,13 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
             Err(_elapsed) => {
                 // oops, client no heartbeat, close stream
                 info!("client no heartbeat, close stream");
-                drop_producer(&connection_id).await;
+                drop_producer(&socket_id).await;
                 return;
             }
             Ok(msg_option) => {
                 if msg_option.is_none() {
-                    drop_producer(&connection_id).await;
                     info!("msg_option none, connection alreadyClosed");
+                    drop_producer(&socket_id).await;
                     return;
                 }
 
@@ -61,8 +61,9 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
                 if msg_result.is_err() {
                     // Connection reset without closing handshake
                     let e = msg_result.err().unwrap();
-                    error!("Error processing inbound message: {}", e);
-                    continue;
+                    info!("Protocol error: {}", e);
+                    drop_producer(&socket_id).await;
+                    return;
                 }
 
                 let msg = msg_result.unwrap();
@@ -70,7 +71,7 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
                     Message::Binary(bytes) => {
                         match serde_json::from_slice::<MsgWrapper>(&bytes) {
                             Ok(msg_wrapper) => {
-                                dispatch_inbound(msg_wrapper, tx.clone()).await;
+                                dispatch_inbound(msg_wrapper, tx.clone(), socket_id.clone()).await;
                             }
                             Err(e) => {
                                 error!("fail to parse bytes to MsgWrapper: err={}", e);
@@ -81,8 +82,8 @@ async fn handle_socket(socket: WebSocket, peer: SocketAddr) {
                         info!("server get test msg={}", txt);
                     }
                     Message::Close(option) => {
-                        drop_producer(&connection_id).await;
                         info!("client proactive close the connection:{:?}", option);
+                        drop_producer(&socket_id).await;
                         return;
                     }
                     Message::Ping(_) => {

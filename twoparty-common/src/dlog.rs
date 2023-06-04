@@ -80,6 +80,7 @@ impl<C: Curve> DLogProof<C> {
     }
 }
 
+#[derive(Serialize,Deserialize)]
 pub struct CurveKeyPair<C: Curve> {
     pub public: Point<C>,
     pub secret: Scalar<C>,

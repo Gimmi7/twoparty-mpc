@@ -37,29 +37,28 @@ pub fn full_keygen() -> (Party1Share, Party2Share) {
     let (party2_keygen_msg1, party2_keypair) = keygen::party2::party2_step1();
 
     // party1 step2
-    let result1 = keygen::party1::party1_step2(
+    let party1_result2 = keygen::party1::party1_step2(
         party2_keygen_msg1,
         witness,
         party1_keypair,
     );
-    if result1.is_err() {
-        println!("{}", result1.err().unwrap());
+    if party1_result2.is_err() {
+        println!("{}", party1_result2.err().unwrap());
         panic!("");
     }
-    let result1_tuple = result1.unwrap();
-    let party1_share = result1_tuple.1;
+    let (party1_keygen_msg2, party1_share)=party1_result2.unwrap();
 
     // party2 step2
-    let result2 = keygen::party2::party2_step2(
-        result1_tuple.0,
+    let party2_result2 = keygen::party2::party2_step2(
+        party1_keygen_msg2,
         party1_keygen_msg1,
         party2_keypair,
     );
-    if result2.is_err() {
-        println!("{}", result2.err().unwrap());
+    if party2_result2.is_err() {
+        println!("{}", party2_result2.err().unwrap());
         panic!("");
     }
-    let party2_share = result2.unwrap();
+    let party2_share = party2_result2.unwrap();
 
     (party1_share, party2_share)
 }

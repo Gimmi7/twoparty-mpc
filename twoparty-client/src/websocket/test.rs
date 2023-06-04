@@ -47,7 +47,7 @@ fn single_thread_rt() {
 async fn test_websocket() {
     let url = "ws://localhost:8822/ws";
     let identity_id = "wangcy";
-    let connect_result = SyncClient::connect_server(identity_id.to_string(), url.to_string(), 10).await;
+    let connect_result = SyncClient::connect_server(identity_id.to_string(), url.to_string(), 3).await;
     let sync_client = connect_result.expect("connect fail");
 
     let req_result = sync_client.send_req(REQ_CODE_MPC22, vec![], None).await;
@@ -130,15 +130,17 @@ async fn test_reassign_drop() {
     // println!("reassign the tx in struct");
 
     // reassign struct with tx will drop old struct
-    let mut wrapper = ChannelWrapper {
+    let mut _wrapper = ChannelWrapper {
         tx
     };
     let (new_tx, _new_rx) = mpsc::unbounded_channel::<()>();
     let new_wrapper = ChannelWrapper {
         tx: new_tx
     };
-    wrapper = new_wrapper;
+    _wrapper = new_wrapper;
+    _wrapper.tx;
     println!("reassign struct with tx");
+
 
 
     //  hang the client

@@ -13,3 +13,10 @@ tokio = { workspace = true, features = ["full"] }
 common.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+jni = "0.21.1"
+twoparty-secp256k1 = { workspace = true }
+twoparty-ed25519 = { workspace = true }
+
+
+[lib]
+crate_type = ["cdylib"]
