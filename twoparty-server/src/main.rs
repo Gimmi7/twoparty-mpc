@@ -10,6 +10,7 @@ use crate::controller::launch_axum;
 pub mod config;
 pub mod websocket;
 pub mod controller;
+pub mod storage;
 
 // https://github.com/tokio-rs/tokio/discussions/3858
 // tokio: worker-threads= cpu_num,  blocking-threads: create-on-demand with upper limit=500

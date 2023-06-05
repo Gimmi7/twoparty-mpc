@@ -28,6 +28,7 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
+    info!("get ws upgrade request");
     // upgrade stream protocol to websocket, register the socket handler
     ws.on_upgrade(move |socket| handle_socket(socket, addr))
 }

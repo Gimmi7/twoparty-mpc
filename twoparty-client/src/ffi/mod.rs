@@ -1,3 +1,4 @@
+
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
 use jni::JNIEnv;
@@ -17,6 +18,7 @@ use crate::mpc::{secp256k1, ed25519};
 
 // This keeps Rust from "mangling" the name and making it unique for this crate.
 #[no_mangle]
+// #[cfg(target_os="android")]
 pub extern "system" fn Java_twoparty_mpc_NativeMpc_seec256k1Keygen<'local>
 (mut env: JNIEnv<'local>, _class: JClass<'local>, j_identity_id: JString, j_ws_url: JString) -> JObjectArray<'local> {
     let identity_id: String = env

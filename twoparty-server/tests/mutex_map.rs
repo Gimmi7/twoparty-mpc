@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::thread;
+use curv::BigInt;
 
 // https://stackoverflow.com/questions/27791532/how-do-i-create-a-global-mutable-singleton
 static CACHED_CONNECTION: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| {
@@ -11,6 +12,7 @@ static CACHED_CONNECTION: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::n
 
 #[test]
 fn test_mutex_map() {
+    BigInt::from_bytes()
     println!("test mutex map in multi threads");
 
     let mut handles = vec![];

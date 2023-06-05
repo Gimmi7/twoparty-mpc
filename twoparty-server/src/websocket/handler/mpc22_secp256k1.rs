@@ -2,10 +2,12 @@ use curv::elliptic::curves::Secp256k1;
 use tracing::{error, info};
 use common::dlog::CurveKeyPair;
 use common::get_uuid;
-use common::socketmsg::{RSP_CODE_BAD_REQUEST, RSP_CODE_FORBIDDEN};
+use common::socketmsg::{RSP_CODE_BAD_REQUEST, RSP_CODE_FORBIDDEN, RSP_CODE_INTERNAL_SERVER_ERROR};
+use common::socketmsg::types::{MPC_SCOPE_SECP256K1ECDSA, SavedShare};
 use crate::websocket::connection_holder::{SocketLocal, upsert_socket_local};
 use crate::websocket::inbound_dispatcher::InboundWithTx;
 use twoparty_secp256k1::{keygen};
+use crate::storage::share_storage::{FileShareStorage};
 
 pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLocal, step: u8, msg_detail: &[u8]) {
     match step {
@@ -51,8 +53,24 @@ pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLo
                 return;
             }
             let share_id = get_uuid();
-            let _share2 = result2.unwrap();
-            // todo save share2
+            let share2 = result2.unwrap();
+
+            let saved_share = SavedShare {
+                identity_id: socket_local.identity_id,
+                share_id: share_id.clone(),
+                scope: MPC_SCOPE_SECP256K1ECDSA,
+                party: 2,
+                uncompressed_pub: share2.public.pub_key.to_bytes(false).to_vec(),
+                share_detail: serde_json::to_vec(&share2).unwrap(),
+            };
+            //  save share2
+            let save_result = FileShareStorage::save_share(saved_share).await;
+            if save_result.is_err() {
+                let err = format!("save share fail: {}", save_result.unwrap_err());
+                error!("{}",&err);
+                inbound.fail_rsp(RSP_CODE_INTERNAL_SERVER_ERROR, err).await;
+                return;
+            }
 
             let share_id_bytes = serde_json::to_vec(&share_id).unwrap();
             inbound.success_rsp(Some(share_id_bytes)).await;
