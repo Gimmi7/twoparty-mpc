@@ -1,3 +1,5 @@
+use curv::arithmetic::Converter;
+use curv::BigInt;
 use curv::elliptic::curves::Secp256k1;
 use tracing::{error, info};
 use common::dlog::CurveKeyPair;
@@ -6,7 +8,8 @@ use common::socketmsg::{RSP_CODE_BAD_REQUEST, RSP_CODE_FORBIDDEN, RSP_CODE_INTER
 use common::socketmsg::types::{MPC_SCOPE_SECP256K1ECDSA, SavedShare};
 use crate::websocket::connection_holder::{SocketLocal, upsert_socket_local};
 use crate::websocket::inbound_dispatcher::InboundWithTx;
-use twoparty_secp256k1::{keygen, rotate, sign};
+use twoparty_secp256k1::{export, keygen, rotate, sign};
+use twoparty_secp256k1::export::party1::Party1ExportMsg2;
 use twoparty_secp256k1::rotate::party1::{Party1RotateMsg1, Party1RotateMsg2};
 use twoparty_secp256k1::sign::party1::{Party1SignMsg1, Party1SignMsg2};
 use crate::storage::share_storage::{FileShareStorage};
@@ -205,7 +208,7 @@ pub async fn secp256k1_rotate(inbound: InboundWithTx, mut socket_local: SocketLo
                 share_detail: serde_json::to_vec(&share22).unwrap(),
             };
             // save share22
-            let save_result=FileShareStorage::save_share(new_saved_share).await;
+            let save_result = FileShareStorage::save_share(new_saved_share).await;
             if save_result.is_err() {
                 let err = format!("save share fail: {}", save_result.unwrap_err());
                 error!("{}",&err);
@@ -219,6 +222,59 @@ pub async fn secp256k1_rotate(inbound: InboundWithTx, mut socket_local: SocketLo
         }
         _ => {
             inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "secp256k1_rotate max step=2".to_string()).await;
+        }
+    }
+}
+
+
+pub async fn secp256k1_export(inbound: InboundWithTx, mut socket_local: SocketLocal, step: u8, msg_detail: &[u8]) {
+    match step {
+        1 => {
+            info!("secp256k1_export step1 start");
+            let party2_export_msg1 = export::party2::party2_step1();
+            let challenge = party2_export_msg1.challenge.clone();
+
+            let mpc_eph = &mut socket_local.mpc_eph;
+            mpc_eph.insert("challenge".to_string(), challenge.to_bytes());
+
+            // update socket_local
+            upsert_socket_local(socket_local).await;
+
+            let party2_export_msg1_bytes = serde_json::to_vec(&party2_export_msg1).unwrap();
+            inbound.success_rsp(Some(party2_export_msg1_bytes)).await;
+            info!("secp256k1_export step1 success");
+        }
+        2 => {
+            info!("secp256k1_export step2 start");
+            let inner_share = socket_local.secp256k1_share.unwrap();
+
+            let party1_export_msg2_result = serde_json::from_slice::<Party1ExportMsg2>(msg_detail);
+            if party1_export_msg2_result.is_err() {
+                inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "fail to parse party1_export_msg2".to_string()).await;
+                return;
+            }
+            let party1_export_msg2 = party1_export_msg2_result.unwrap();
+
+            let mpc_eph = &mut socket_local.mpc_eph;
+            let challenge = BigInt::from_bytes(mpc_eph.get("challenge").unwrap());
+
+            let party2_result2 = export::party2::party2_step2(
+                party1_export_msg2, &challenge, &inner_share);
+            if party2_result2.is_err() {
+                let err = party2_result2.err().unwrap().to_string();
+                error!("{}", err);
+                inbound.fail_rsp(RSP_CODE_FORBIDDEN, err).await;
+                return;
+            }
+            let party2_export_msg2 = party2_result2.unwrap();
+
+            let party2_export_msg2_bytes = serde_json::to_vec(&party2_export_msg2).unwrap();
+            inbound.success_rsp(Some(party2_export_msg2_bytes)).await;
+            //  TODO record export
+            info!("secp256k1_export step2 success");
+        }
+        _ => {
+            inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "secp256k1_export max step=2".to_string()).await;
         }
     }
 }

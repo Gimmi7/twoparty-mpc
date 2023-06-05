@@ -32,3 +32,6 @@ pub struct SavedShare {
     pub uncompressed_pub: Vec<u8>,
     pub share_detail: Vec<u8>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct EmptyMsg {}

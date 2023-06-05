@@ -1,4 +1,4 @@
-use crate::mpc::secp256k1::{secp256k1_rotate, secp256k1_sign, Secp256k1Sig};
+use crate::mpc::secp256k1::{secp256k1_export, secp256k1_rotate, secp256k1_sign, Secp256k1Sig};
 use super::secp256k1;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -6,7 +6,9 @@ async fn test_secp256k1_ecdsa() {
     let identity_id = "wangcy";
     let url = "ws://localhost:8822/ws";
     let saved_share = secp256k1::secp256k1_keygen(identity_id.to_string(), url.to_string()).await.unwrap();
-    println!("{}", serde_json::to_string(&saved_share).unwrap());
+    println!("secp256k1 keygen success, share_id={}", &saved_share.share_id);
+    let x = secp256k1_export(url.to_string(), &saved_share).await.unwrap();
+    println!("export success x={}", x);
 
     let message_digest = vec![1, 2, 3, 4];
     let sig = secp256k1_sign(url.to_string(), &saved_share, message_digest).await.unwrap();
@@ -14,7 +16,14 @@ async fn test_secp256k1_ecdsa() {
     println!("{:?}", secp256k1_sig);
 
     let new_share = secp256k1_rotate(url.to_string(), &saved_share).await.unwrap();
-    println!("{}", new_share.share_id);
+    println!("rotate success, new_share_id={}", new_share.share_id);
+
+    let x_rotate = secp256k1_export(url.to_string(), &new_share).await.unwrap();
+    println!("export new_share success, x={}", x_rotate);
+
+    if x != x_rotate {
+        panic!("x_rotate != x");
+    }
 }
 
 

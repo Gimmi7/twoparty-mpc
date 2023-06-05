@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
-use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_ROTATE, MPC_SCOPE_SECP256K1ECDSA, MPC_SIGN, SavedShare};
+use common::socketmsg::types::{EmptyMsg, Mpc22Msg, MPC_EXPORT, MPC_KEYGEN, MPC_ROTATE, MPC_SCOPE_SECP256K1ECDSA, MPC_SIGN, SavedShare};
 use crate::websocket::SyncClient;
-use twoparty_secp256k1::{keygen, sign, generic::share::Party1Share, rotate};
+use twoparty_secp256k1::{keygen, sign, generic::share::Party1Share, rotate, export};
 use twoparty_secp256k1::sign::party2::{Party2SignMsg1, Party2SignMsg2};
 use crate::mpc::parse_rsp;
 use curv::arithmetic::traits::Converter;
+use twoparty_secp256k1::export::party2::Party2ExportMsg1;
 use twoparty_secp256k1::rotate::party2::{Party2RotateMsg1, Party2RotateMsg2};
 
 
@@ -65,7 +66,7 @@ pub struct Secp256k1Sig {
 }
 
 pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_digest: Vec<u8>) -> Result<Vec<u8>, String> {
-    let share = parse_party1_share(&saved_share.share_detail)?;
+    let inner_share = parse_party1_share(&saved_share.share_detail)?;
     let identity_id = &saved_share.identity_id;
     let sync_client = SyncClient::connect_server(identity_id.to_string(), url, 10).await?;
     let (
@@ -90,7 +91,7 @@ pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_diges
         d_log_witness,
         &message_digest,
         &party1_eph_keypair,
-        &share,
+        &inner_share,
     );
     if party1_result2.is_err() {
         return Err(party1_result2.err().unwrap().to_string());
@@ -103,7 +104,7 @@ pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_diges
 
     let party1_result3 = sign::party1::party1_step3(
         party2_sign_msg2,
-        &share,
+        &inner_share,
         party1_eph_keypair,
         &message_digest,
         k2_G,
@@ -175,4 +176,38 @@ pub async fn secp256k1_rotate(url: String, old_share: &SavedShare) -> Result<Sav
     };
 
     Ok(new_saved_share)
+}
+
+
+pub async fn secp256k1_export(url: String, saved_share: &SavedShare) -> Result<String, String> {
+    let inner_share = parse_party1_share(&saved_share.share_detail)?;
+    let identity_id = &saved_share.identity_id;
+    let sync_client = SyncClient::connect_server(identity_id.to_string(), url, 10).await?;
+    let mpc22_msg = Mpc22Msg {
+        command: MPC_EXPORT,
+        scope: MPC_SCOPE_SECP256K1ECDSA,
+        party: 1,
+        step: 1,
+        msg_detail: vec![],
+        identity_id: identity_id.clone(),
+        share_id: saved_share.share_id.to_string(),
+    };
+    let empty_msg = EmptyMsg {};
+    let rsp1 = sync_client.send_mpc22_msg(&empty_msg, mpc22_msg.clone()).await?;
+    let party2_export_msg1 = parse_rsp::<Party2ExportMsg1>(&rsp1)?;
+
+    let party1_export_msg2 = export::party1::party1_step2(party2_export_msg1, &inner_share);
+    let mut mpc22_step2 = mpc22_msg.clone();
+    mpc22_step2.step = 2;
+    let rsp2 = sync_client.send_mpc22_msg(&party1_export_msg2, mpc22_step2).await?;
+    let party2_export_msg2 = parse_rsp(&rsp2)?;
+
+    let party1_result3 = export::party1::party1_step3(
+        party2_export_msg2, &inner_share);
+    if party1_result3.is_err() {
+        return Err(party1_result3.err().unwrap().to_string());
+    }
+    let export_x = party1_result3.unwrap();
+
+    Ok(export_x.to_hex())
 }
