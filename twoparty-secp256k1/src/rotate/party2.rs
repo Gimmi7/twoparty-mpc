@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use zk_paillier::zkproofs::SALT_STRING;
 use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_ECDSA_SECP256K1, TwoPartyError};
+use common::get_uuid;
 
 use crate::generic::share::{Party2Private, Party2Public, Party2Share};
 use crate::keygen::correct_encrypt_secret::CorrectEncryptSecretStatement;
@@ -26,9 +27,10 @@ pub fn party2_step1() -> (Party2RotateMsg1, CurveKeyPair<Secp256k1>) {
     )
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone, Debug)]
 pub struct Party2RotateMsg2 {
     pub new_x2_proof: DLogProof<Secp256k1>,
+    pub share_id: String,
 }
 
 pub fn party2_step2(
@@ -120,7 +122,8 @@ pub fn party2_step2(
 
     Ok((
         Party2RotateMsg2 {
-            new_x2_proof
+            new_x2_proof,
+            share_id: get_uuid(),
         },
         new_share
     ))

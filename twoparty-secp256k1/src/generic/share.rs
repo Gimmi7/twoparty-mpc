@@ -35,12 +35,12 @@ pub struct Party2Public {
     pub pub_key: Point<Secp256k1>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Party2Private {
     pub x2: Scalar<Secp256k1>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Party2Share {
     pub public: Party2Public,
     pub private: Party2Private,

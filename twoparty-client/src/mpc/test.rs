@@ -1,4 +1,4 @@
-use crate::mpc::secp256k1::{secp256k1_sign, Secp256k1Sig};
+use crate::mpc::secp256k1::{secp256k1_rotate, secp256k1_sign, Secp256k1Sig};
 use super::secp256k1;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -9,9 +9,12 @@ async fn test_secp256k1_ecdsa() {
     println!("{}", serde_json::to_string(&saved_share).unwrap());
 
     let message_digest = vec![1, 2, 3, 4];
-    let sig = secp256k1_sign(identity_id.to_string(), url.to_string(), &saved_share, message_digest).await.unwrap();
+    let sig = secp256k1_sign(url.to_string(), &saved_share, message_digest).await.unwrap();
     let secp256k1_sig = serde_json::from_slice::<Secp256k1Sig>(&sig).unwrap();
     println!("{:?}", secp256k1_sig);
+
+    let new_share = secp256k1_rotate(url.to_string(), &saved_share).await.unwrap();
+    println!("{}", new_share.share_id);
 }
 
 

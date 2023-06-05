@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use std::sync::{Arc, LazyLock};
@@ -8,18 +7,22 @@ use futures_util::stream::SplitSink;
 use tokio::sync::{mpsc, RwLock};
 use tokio::sync::mpsc::{UnboundedSender};
 use tracing::info;
+use twoparty_secp256k1::generic::share::Party2Share as Secp256k1Share;
+use twoparty_ed25519::generic::share::Ed25519Share;
 
 #[allow(clippy::type_complexity)]
 static PRODUCER_GROUP: LazyLock<Arc<RwLock<HashMap<String, UnboundedSender<Message>>>>> = LazyLock::new(|| {
     Arc::new(RwLock::new(HashMap::new()))
 });
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SocketLocal {
     pub socket_id: String,
     pub identity_id: String,
     pub share_id: String,
     pub mpc_eph: HashMap<String, Vec<u8>>,
+    pub secp256k1_share: Option<Secp256k1Share>,
+    pub ed25519_share: Option<Ed25519Share>,
 }
 
 #[allow(clippy::type_complexity)]
