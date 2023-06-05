@@ -6,7 +6,9 @@ use common::socketmsg::{RSP_CODE_BAD_REQUEST, RSP_CODE_FORBIDDEN, RSP_CODE_INTER
 use common::socketmsg::types::{MPC_SCOPE_SECP256K1ECDSA, SavedShare};
 use crate::websocket::connection_holder::{SocketLocal, upsert_socket_local};
 use crate::websocket::inbound_dispatcher::InboundWithTx;
-use twoparty_secp256k1::{keygen};
+use twoparty_secp256k1::{keygen, sign};
+use twoparty_secp256k1::generic::share::Party2Share;
+use twoparty_secp256k1::sign::party1::{Party1SignMsg1, Party1SignMsg2};
 use crate::storage::share_storage::{FileShareStorage};
 
 pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLocal, step: u8, msg_detail: &[u8]) {
@@ -18,10 +20,10 @@ pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLo
                 inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "fail to parse party1_keygen_msg1".to_string()).await;
                 return;
             }
-            let party1_keygen_msg1 = party1_keygen_msg1_result.unwrap();
+
             let (party2_keygen_msg1, party2_keypair) = keygen::party2::party2_step1();
             let mpc_eph = &mut socket_local.mpc_eph;
-            mpc_eph.insert("party1_keygen_msg1".to_string(), serde_json::to_vec(&party1_keygen_msg1).unwrap());
+            mpc_eph.insert("party1_keygen_msg1".to_string(), msg_detail.to_vec());
             mpc_eph.insert("party2_keypair".to_string(), serde_json::to_vec(&party2_keypair).unwrap());
 
             // update socket_local
@@ -78,6 +80,76 @@ pub async fn secp256k1_keygen(inbound: InboundWithTx, mut socket_local: SocketLo
         }
         _ => {
             inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "secp256k1_keygen max step=2".to_string()).await;
+        }
+    }
+}
+
+pub async fn secp256k1_sign(inbound: InboundWithTx, mut socket_local: SocketLocal, step: u8, msg_detail: &[u8]) {
+    match step {
+        1 => {
+            info!("secp256k1_sign step1 start");
+            let party1_sign_msg1_result = serde_json::from_slice::<Party1SignMsg1>(msg_detail);
+            if party1_sign_msg1_result.is_err() {
+                inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "fail to parse party1_sign_msg1".to_string()).await;
+                return;
+            }
+
+            let (party2_sign_msg1, party2_eph_keypair) = sign::party2::party2_step1();
+            let mpc_eph = &mut socket_local.mpc_eph;
+            mpc_eph.insert("party1_sign_msg1".to_string(), msg_detail.to_vec());
+            mpc_eph.insert("party2_eph_keypair".to_string(), serde_json::to_vec(&party2_eph_keypair).unwrap());
+
+            // update socket_local
+            upsert_socket_local(socket_local).await;
+
+            let party2_sign_msg1_bytes = serde_json::to_vec(&party2_sign_msg1).unwrap();
+            inbound.success_rsp(Some(party2_sign_msg1_bytes)).await;
+            info!("secp256k1_sign step1 success");
+        }
+        2 => {
+            info!("secp256k1_sign step2 start");
+            let share_id = &socket_local.share_id;
+            let saved_share_result = FileShareStorage::load_share(share_id.to_string()).await;
+            if saved_share_result.is_err() {
+                let err = format!("fail to load share:{}", saved_share_result.err().unwrap());
+                error!("{}", &err);
+                inbound.fail_rsp(RSP_CODE_BAD_REQUEST, err).await;
+                return;
+            }
+            let saved_share = saved_share_result.unwrap();
+            let inner_share = serde_json::from_slice::<Party2Share>(&saved_share.share_detail).unwrap();
+
+
+            let party1_sign_msg2_result = serde_json::from_slice::<Party1SignMsg2>(msg_detail);
+            if party1_sign_msg2_result.is_err() {
+                inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "fail to parse party1_sign_msg2".to_string()).await;
+                return;
+            }
+            let party1_sign_msg2 = party1_sign_msg2_result.unwrap();
+
+            let mpc_eph = &mut socket_local.mpc_eph;
+            let party1_sign_msg1 = serde_json::from_slice::<Party1SignMsg1>(mpc_eph.get("party1_sign_msg1").unwrap()).unwrap();
+            let party2_eph_keypair = serde_json::from_slice::<CurveKeyPair<Secp256k1>>(mpc_eph.get("party2_eph_keypair").unwrap()).unwrap();
+
+            let party2_result2 = sign::party2::party2_step2(
+                party1_sign_msg2,
+                party1_sign_msg1,
+                &inner_share,
+                party2_eph_keypair);
+            if party2_result2.is_err() {
+                let err = party2_result2.err().unwrap().to_string();
+                error!("{}", err);
+                inbound.fail_rsp(RSP_CODE_FORBIDDEN, err).await;
+                return;
+            }
+            let party2_sign_msg2 = party2_result2.unwrap();
+
+            let party2_sign_msg2_bytes = serde_json::to_vec(&party2_sign_msg2).unwrap();
+            inbound.success_rsp(Some(party2_sign_msg2_bytes)).await;
+            info!("secp256k1_sign step2 success");
+        }
+        _ => {
+            inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "secp256k1_sign max step=2".to_string()).await;
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::websocket::inbound_dispatcher::InboundWithTx;
 use common::socketmsg::{RSP_CODE_BAD_REQUEST, RSP_CODE_NOT_FOUND};
 use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_SIGN, MPC_ROTATE, MPC_EXPORT, MPC_SCOPE_SECP256K1ECDSA, MPC_SCOPE_ED25519EDDSA};
 use crate::websocket::connection_holder::{SocketLocal, get_socket_local, upsert_socket_local};
-use crate::websocket::handler::mpc22_secp256k1::secp256k1_keygen;
+use crate::websocket::handler::mpc22_secp256k1::{secp256k1_keygen, secp256k1_sign};
 
 pub async fn mpc22_handler(inbound: InboundWithTx) {
     let req = &inbound.msg_wrapper;
@@ -78,6 +78,7 @@ pub async fn mpc22_handler(inbound: InboundWithTx) {
         MPC_SIGN => {
             match *scope {
                 MPC_SCOPE_SECP256K1ECDSA => {
+                    secp256k1_sign(inbound, socket_local.clone(), step, msg_detail).await;
                 }
                 MPC_SCOPE_ED25519EDDSA => {}
                 _ => {

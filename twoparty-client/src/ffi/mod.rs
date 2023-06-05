@@ -33,7 +33,7 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_seec256k1Keygen<'local>
 
     let rt = get_runtime();
     let result = rt.block_on(async {
-        let result = secp256k1::keygen(identity_id, ws_url).await;
+        let result = secp256k1::secp256k1_keygen(identity_id, ws_url).await;
         result
     });
 

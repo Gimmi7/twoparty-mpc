@@ -1,10 +1,14 @@
-
-use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_SCOPE_SECP256K1ECDSA, SavedShare};
+use serde::{Deserialize, Serialize};
+use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_SCOPE_SECP256K1ECDSA, MPC_SIGN, SavedShare};
 use crate::websocket::SyncClient;
-use twoparty_secp256k1::keygen;
+use twoparty_secp256k1::{keygen, sign, generic::share::Party1Share};
+use twoparty_secp256k1::sign::party2::{Party2SignMsg1, Party2SignMsg2};
 use crate::mpc::parse_rsp;
+use curv::arithmetic::traits::Converter;
 
-pub async fn keygen(identity_id: String, url: String) -> Result<SavedShare, String> {
+
+
+pub async fn secp256k1_keygen(identity_id: String, url: String) -> Result<SavedShare, String> {
     let sync_client = SyncClient::connect_server(identity_id.clone(), url, 10).await?;
     let (party1_keygen_msg1, witness, party1_keypair) = keygen::party1::party1_step1();
     let mpc22_msg = Mpc22Msg {
@@ -16,7 +20,6 @@ pub async fn keygen(identity_id: String, url: String) -> Result<SavedShare, Stri
         identity_id: identity_id.clone(),
         share_id: "".to_string(),
     };
-
     let rsp1 = sync_client.send_mpc22_msg(&party1_keygen_msg1, mpc22_msg.clone()).await?;
     let party2_keygen_msg1 = parse_rsp::<keygen::party2::Party2KeyGenMsg1>(&rsp1)?;
 
@@ -29,7 +32,6 @@ pub async fn keygen(identity_id: String, url: String) -> Result<SavedShare, Stri
         return Err(party1_result2.err().unwrap().to_string());
     }
     let (party1_keygen_msg2, party1_share) = party1_result2.unwrap();
-
     let mut mpc22_step2 = mpc22_msg.clone();
     mpc22_step2.step = 2;
     let rsp2 = sync_client.send_mpc22_msg(&party1_keygen_msg2, mpc22_step2).await?;
@@ -45,4 +47,75 @@ pub async fn keygen(identity_id: String, url: String) -> Result<SavedShare, Stri
         share_detail: inner_share_bytes,
     };
     Ok(saved_share)
+}
+
+fn parse_party1_share(share_detail: &[u8]) -> Result<Party1Share, String> {
+    let share_detail_result = serde_json::from_slice::<Party1Share>(share_detail);
+    if share_detail_result.is_err() {
+        return Err(share_detail_result.err().unwrap().to_string());
+    }
+    Ok(share_detail_result.unwrap())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Secp256k1Sig {
+    pub r: String,
+    pub s: String,
+    pub v: u8,
+}
+
+pub async fn secp256k1_sign(identity_id: String, url: String, saved_share: &SavedShare, message_digest: Vec<u8>) -> Result<Vec<u8>, String> {
+    let share = parse_party1_share(&saved_share.share_detail)?;
+    let sync_client = SyncClient::connect_server(identity_id.clone(), url, 10).await?;
+    let (
+        party1_sign_msg1,
+        d_log_witness,
+        party1_eph_keypair
+    ) = sign::party1::party1_step1();
+    let mpc22_msg = Mpc22Msg {
+        command: MPC_SIGN,
+        scope: MPC_SCOPE_SECP256K1ECDSA,
+        party: 1,
+        step: 1,
+        msg_detail: vec![],
+        identity_id: identity_id.clone(),
+        share_id: saved_share.share_id.to_string(),
+    };
+    let rsp1 = sync_client.send_mpc22_msg(&party1_sign_msg1, mpc22_msg.clone()).await?;
+    let party2_sign_msg1 = parse_rsp::<Party2SignMsg1>(&rsp1)?;
+
+    let party1_result2 = sign::party1::party1_step2(
+        party2_sign_msg1,
+        d_log_witness,
+        &message_digest,
+        &party1_eph_keypair,
+        &share,
+    );
+    if party1_result2.is_err() {
+        return Err(party1_result2.err().unwrap().to_string());
+    }
+    let (party1_sign_msg2, k2_G) = party1_result2.unwrap();
+    let mut mpc22_step2 = mpc22_msg.clone();
+    mpc22_step2.step = 2;
+    let rsp2 = sync_client.send_mpc22_msg(&party1_sign_msg2, mpc22_step2).await?;
+    let party2_sign_msg2 = parse_rsp::<Party2SignMsg2>(&rsp2)?;
+
+    let party1_result3 = sign::party1::party1_step3(
+        party2_sign_msg2,
+        &share,
+        party1_eph_keypair,
+        &message_digest,
+        k2_G,
+    );
+    if party1_result3.is_err() {
+        return Err(party1_result3.err().unwrap().to_string());
+    }
+    let sig = party1_result3.unwrap();
+
+    let secp256k1_sig = Secp256k1Sig {
+        r: sig.r.to_hex(),
+        s: sig.s.to_hex(),
+        v: sig.v,
+    };
+    Ok(serde_json::to_vec(&secp256k1_sig).unwrap())
 }
