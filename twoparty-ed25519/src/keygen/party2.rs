@@ -5,6 +5,7 @@ use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use serde::{Deserialize, Serialize};
 use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_EDDSA_ED25519, TwoPartyError};
+use common::get_uuid;
 use crate::ChosenHash;
 use crate::generic::clamping_seed;
 use crate::generic::share::Ed25519Share;
@@ -15,6 +16,7 @@ pub struct Party2KeygenMsg1 {
     pub d_log_proof: DLogProof<Ed25519>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Party2InitAssets {
     pub x2: Scalar<Ed25519>,
     pub prefix: [u8; 32],
@@ -38,9 +40,10 @@ pub fn party2_step1() -> (Party2KeygenMsg1, Party2InitAssets) {
     )
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Party2KeygenMsg2 {
     pub agg_Q: Point<Ed25519>,
+    pub share_id: String,
 }
 
 pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Party2InitAssets) -> Result<(Party2KeygenMsg2, Ed25519Share), TwoPartyError> {
@@ -76,7 +79,7 @@ pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Part
         x: assets.x2,
         agg_hash_Q,
         agg_Q: agg_Q.clone(),
-        agg_Q_minus: (-&agg_Q),
+        agg_Q_minus: (-&agg_Q).clone(),
     };
 
     // check agg_Q consistent
@@ -86,7 +89,8 @@ pub fn party2_step2(msg2: Party1KeygenMsg2, msg1: Party1KeygenMsg1, assets: Part
     }
 
     let party2_keygen_msg2 = Party2KeygenMsg2 {
-        agg_Q
+        agg_Q,
+        share_id: get_uuid(),
     };
 
     Ok((

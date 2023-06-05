@@ -45,6 +45,7 @@ pub fn full_keygen() -> (Ed25519Share, Ed25519Share) {
         panic!("")
     }
     let (party1_msg2, pending_share1) = party1_result2.unwrap();
+
     // party2 step2
     let party2_result2 = keygen::party2::party2_step2(
         party1_msg2,

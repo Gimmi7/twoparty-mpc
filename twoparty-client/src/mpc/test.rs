@@ -1,3 +1,4 @@
+use crate::mpc::ed25519::ed25519_keygen;
 use crate::mpc::secp256k1::{secp256k1_export, secp256k1_rotate, secp256k1_sign, Secp256k1Sig};
 use super::secp256k1;
 
@@ -24,6 +25,15 @@ async fn test_secp256k1_ecdsa() {
     if x != x_rotate {
         panic!("x_rotate != x");
     }
+}
+
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_ed25519_eddsa() {
+    let identity_id = "wangcy";
+    let url = "ws://localhost:8822/ws";
+    let saved_share = ed25519_keygen(identity_id.to_string(), url.to_string()).await.unwrap();
+    println!("ed25519 keygen success, share_id={}", &saved_share.share_id);
 }
 
 
