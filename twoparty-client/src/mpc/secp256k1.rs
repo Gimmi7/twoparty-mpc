@@ -60,7 +60,9 @@ fn parse_party1_share(share_detail: &[u8]) -> Result<Party1Share, String> {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Secp256k1Sig {
+    // hex encoded
     pub r: String,
+    // hex encoded
     pub s: String,
     pub v: u8,
 }
