@@ -2,6 +2,7 @@ use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use serde::{Deserialize, Serialize};
 use common::dlog::{CurveKeyPair, DLogProof};
 use common::errors::{SCOPE_EDDSA_ED25519, TwoPartyError};
+use common::get_uuid;
 use crate::generic::share::Ed25519Share;
 use crate::rotate::party1::{Party1RotateMsg1, Party1RotateMsg2};
 
@@ -21,9 +22,10 @@ pub fn party2_step1() -> (Party2RotateMsg1, CurveKeyPair<Ed25519>) {
     )
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Party2RotateMsg2 {
     pub new_x2_proof: DLogProof<Ed25519>,
+    pub share_id: String,
 }
 
 pub fn party2_step2(msg2: Party1RotateMsg2, msg1: Party1RotateMsg1, delta_keypair: CurveKeyPair<Ed25519>, share: &Ed25519Share) -> Result<(Party2RotateMsg2, Ed25519Share), TwoPartyError> {
@@ -68,7 +70,8 @@ pub fn party2_step2(msg2: Party1RotateMsg2, msg1: Party1RotateMsg1, delta_keypai
 
     Ok((
         Party2RotateMsg2 {
-            new_x2_proof
+            new_x2_proof,
+            share_id: get_uuid(),
         },
         new_share
     ))

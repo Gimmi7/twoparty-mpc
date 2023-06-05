@@ -1,7 +1,8 @@
-use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_SCOPE_ED25519EDDSA, MPC_SIGN, SavedShare};
+use common::socketmsg::types::{Mpc22Msg, MPC_KEYGEN, MPC_ROTATE, MPC_SCOPE_ED25519EDDSA, MPC_SIGN, SavedShare};
 use twoparty_ed25519::generic::share::Ed25519Share;
-use twoparty_ed25519::{keygen, sign};
+use twoparty_ed25519::{keygen, rotate, sign};
 use twoparty_ed25519::keygen::party2::{Party2KeygenMsg1, Party2KeygenMsg2};
+use twoparty_ed25519::rotate::party2::{Party2RotateMsg1, Party2RotateMsg2};
 use twoparty_ed25519::sign::party2::{Party2SignMsg1, Party2SignMsg2};
 use crate::mpc::parse_rsp;
 use crate::websocket::SyncClient;
@@ -114,4 +115,63 @@ pub async fn ed25519_sign(url: String, saved_share: &SavedShare, message_digest:
     sig_bytes[..32].copy_from_slice(sig.R.to_bytes(true).as_ref());
     sig_bytes[32..].copy_from_slice(sig.s.to_bytes().as_ref());
     Ok(Vec::from(sig_bytes))
+}
+
+pub async fn ed25519_rotate(url: String, saved_share: &SavedShare) -> Result<SavedShare, String> {
+    let inner_share = parse_share(&saved_share.share_detail)?;
+    let identity_id = &saved_share.identity_id;
+    let sync_client = SyncClient::connect_server(identity_id.clone(), url, 10).await?;
+    let (party1_rotate_msg1,
+        delta_keypair1,
+        delta_witness) = rotate::party1::party1_step1();
+    let mpc22_msg = Mpc22Msg {
+        command: MPC_ROTATE,
+        scope: MPC_SCOPE_ED25519EDDSA,
+        party: 1,
+        step: 1,
+        msg_detail: vec![],
+        identity_id: identity_id.clone(),
+        share_id: saved_share.share_id.to_string(),
+    };
+    let rsp1 = sync_client.send_mpc22_msg(&party1_rotate_msg1, mpc22_msg.clone()).await?;
+    let party2_rotate_msg1 = parse_rsp::<Party2RotateMsg1>(&rsp1)?;
+
+
+    let party1_result2 = rotate::party1::party1_step2(
+        party2_rotate_msg1,
+        delta_witness,
+        delta_keypair1,
+        &inner_share,
+    );
+    if party1_result2.is_err() {
+        return Err(party1_result2.err().unwrap().to_string());
+    }
+    let (party1_rotate_msg2, new_x1) = party1_result2.unwrap();
+
+    let mut mpc22_step2 = mpc22_msg.clone();
+    mpc22_step2.step = 2;
+    let rsp2 = sync_client.send_mpc22_msg(&party1_rotate_msg2, mpc22_step2).await?;
+    let party2_rotate_msg2 = parse_rsp::<Party2RotateMsg2>(&rsp2)?;
+
+    let party1_result3 = rotate::party1::party1_step3(
+        party2_rotate_msg2.clone(),
+        new_x1,
+        &inner_share,
+    );
+    if party1_result3.is_err() {
+        return Err(party1_result3.err().unwrap().to_string());
+    }
+    let new_share1 = party1_result3.unwrap();
+
+    let new_share_id = &party2_rotate_msg2.share_id;
+    let new_saved_share = SavedShare {
+        identity_id: identity_id.to_string(),
+        share_id: new_share_id.to_string(),
+        scope: MPC_SCOPE_ED25519EDDSA,
+        party: 1,
+        uncompressed_pub: new_share1.agg_Q.to_bytes(false).to_vec(),
+        share_detail: serde_json::to_vec(&new_share1).unwrap(),
+    };
+
+    Ok(new_saved_share)
 }

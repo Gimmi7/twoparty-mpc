@@ -1,4 +1,4 @@
-use crate::mpc::ed25519::{ed25519_keygen, ed25519_sign};
+use crate::mpc::ed25519::{ed25519_keygen, ed25519_rotate, ed25519_sign};
 use crate::mpc::secp256k1::{secp256k1_export, secp256k1_rotate, secp256k1_sign, Secp256k1Sig};
 use super::secp256k1;
 
@@ -36,8 +36,18 @@ async fn test_ed25519_eddsa() {
     println!("ed25519 keygen success, share_id={}", &saved_share.share_id);
 
     let message_digest = vec![1, 2, 3, 4];
-    let sig = ed25519_sign(url.to_string(), &saved_share, message_digest).await.unwrap();
+    let sig = ed25519_sign(url.to_string(), &saved_share, message_digest.clone()).await.unwrap();
     println!("sig length={}", sig.len());
+
+    let rotated_share = ed25519_rotate(url.to_string(), &saved_share).await.unwrap();
+    println!("ed25519 rotate success, share_id={}", &rotated_share.share_id);
+
+    let sig2 = ed25519_sign(url.to_string(), &rotated_share, message_digest).await.unwrap();
+    println!("sig length={}", sig2.len());
+
+    if sig2 != sig {
+        panic!("sig not deterministic after rotate");
+    }
 }
 
 

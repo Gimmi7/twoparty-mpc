@@ -9,7 +9,7 @@ use twoparty_ed25519::generic::share::Ed25519Share;
 use twoparty_secp256k1::generic::share::Party2Share;
 use crate::storage::share_storage::FileShareStorage;
 use crate::websocket::connection_holder::{SocketLocal, get_socket_local, upsert_socket_local};
-use crate::websocket::handler::mpc22_ed25519::{ed25519_keygen, ed25519_sign};
+use crate::websocket::handler::mpc22_ed25519::{ed25519_keygen, ed25519_rotate, ed25519_sign};
 use crate::websocket::handler::mpc22_secp256k1::{secp256k1_export, secp256k1_keygen, secp256k1_rotate, secp256k1_sign};
 
 pub async fn mpc22_handler(inbound: InboundWithTx) {
@@ -126,7 +126,9 @@ pub async fn mpc22_handler(inbound: InboundWithTx) {
                 MPC_SCOPE_SECP256K1ECDSA => {
                     secp256k1_rotate(inbound, socket_local.clone(), step, msg_detail).await;
                 }
-                MPC_SCOPE_ED25519EDDSA => {}
+                MPC_SCOPE_ED25519EDDSA => {
+                    ed25519_rotate(inbound, socket_local.clone(), step, msg_detail).await;
+                }
                 _ => {
                     inbound.fail_rsp(RSP_CODE_BAD_REQUEST, "unsupported scope".to_string()).await;
                 }
