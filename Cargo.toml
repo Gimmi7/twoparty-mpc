@@ -7,6 +7,7 @@ members = [
     "twoparty-server",
     "twoparty-client",
 ]
+default-members = ["twoparty-server"]
 
 [workspace.dependencies]
 zk-paillier = { version = "0.4.4", git = "https://github.com/Gimmi7/zk-paillier-cy", rev = "d832f389f853bcb8c801c7c9dea73be077f222e3" }
