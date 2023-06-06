@@ -11,6 +11,8 @@ public class MpcTypes {
         public String share_id;
         public int scope;
         public int party;
+        // secp256k1 uncompressed_pub's type is [u8;65], explicitly [4,x,y]
+        // ed25519 uncompressed_pub's type is [u8;32], explicitly [x]
         public byte[] uncompressed_pub;
         public byte[] share_detail;
     }

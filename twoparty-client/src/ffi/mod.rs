@@ -12,8 +12,9 @@ use jni::objects::{JClass, JObjectArray, JString, JObject, JByteArray};
 // lifetime checker won't let us.
 
 use tokio::runtime::Runtime;
-use common::socketmsg::types::SavedShare;
-use crate::mpc::{secp256k1, ed25519};
+use common::socketmsg::types::{MPC_SCOPE_ED25519EDDSA, MPC_SCOPE_SECP256K1ECDSA, SavedShare};
+use crate::mpc::ed25519::{ed25519_keygen, ed25519_rotate, ed25519_sign};
+use crate::mpc::secp256k1::{secp256k1_export, secp256k1_keygen, secp256k1_rotate, secp256k1_sign};
 
 // #[cfg(target_os="android")]
 // This keeps Rust from "mangling" the name and making it unique for this crate.
@@ -31,8 +32,8 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_secp256k1Keygen<'local>
         .into();
 
     let rt = get_runtime();
-    let result = rt.block_on(async {
-        secp256k1::secp256k1_keygen(identity_id, ws_url).await
+    let result = rt.block_on(async move {
+       secp256k1_keygen(identity_id, ws_url).await
     });
 
     return if let Ok(share) = result {
@@ -56,8 +57,8 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_secp256k1Sign<'local>
 
     let rt = get_runtime();
     let result = rt.block_on(async move {
-        let saved_share = parse_share(share_bytes)?;
-        secp256k1::secp256k1_sign(ws_url, &saved_share, message_digest).await
+        let saved_share = parse_share(share_bytes, MPC_SCOPE_SECP256K1ECDSA)?;
+        secp256k1_sign(ws_url, &saved_share, message_digest).await
     });
 
     return if let Ok(sig) = result {
@@ -80,8 +81,8 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_secp256k1Rotate<'local>
 
     let rt = get_runtime();
     let result = rt.block_on(async move {
-        let saved_share = parse_share(share_bytes)?;
-        secp256k1::secp256k1_rotate(ws_url, &saved_share).await
+        let saved_share = parse_share(share_bytes, MPC_SCOPE_SECP256K1ECDSA)?;
+        secp256k1_rotate(ws_url, &saved_share).await
     });
 
     return if let Ok(new_share) = result {
@@ -104,8 +105,8 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_secp256k1Export<'local>
 
     let rt = get_runtime();
     let result = rt.block_on(async move {
-        let saved_share = parse_share(share_bytes)?;
-        secp256k1::secp256k1_export(ws_url, &saved_share).await
+        let saved_share = parse_share(share_bytes, MPC_SCOPE_SECP256K1ECDSA)?;
+        secp256k1_export(ws_url, &saved_share).await
     });
 
     return if let Ok(x) = result {
@@ -116,6 +117,81 @@ pub extern "system" fn Java_twoparty_mpc_NativeMpc_secp256k1Export<'local>
     };
 }
 
+#[no_mangle]
+pub extern "system" fn Java_twoparty_mpc_NativeMpc_ed25519Keygen<'local>
+(mut env: JNIEnv<'local>, _class: JClass, j_identity_id: JString, j_ws_url: JString) -> JObjectArray<'local> {
+    let identity_id: String = env
+        .get_string(&j_identity_id)
+        .expect("Couldn't get java string!")
+        .into();
+
+    let ws_url: String = env
+        .get_string(&j_ws_url)
+        .expect("Couldn't get java string!")
+        .into();
+
+    let rt = get_runtime();
+    let result = rt.block_on(async move {
+        ed25519_keygen(identity_id, ws_url).await
+    });
+
+    return if let Ok(share) = result {
+        let share_bytes = serde_json::to_vec(&share).unwrap();
+        fill_j_obj_arr(env, share_bytes, None)
+    } else {
+        let err = result.err().unwrap();
+        fill_j_obj_arr(env, vec![], Some(err))
+    };
+}
+
+
+#[no_mangle]
+pub extern "system" fn Java_twoparty_mpc_NativeMpc_ed25519Sign<'local>
+(mut env: JNIEnv<'local>, _class: JClass, j_ws_url: JString, j_share: JByteArray, j_message_digest: JByteArray) -> JObjectArray<'local> {
+    let ws_url: String = env
+        .get_string(&j_ws_url)
+        .expect("Couldn't get java string!")
+        .into();
+    let share_bytes = env.convert_byte_array(&j_share).expect("fail to get java bytes");
+    let message_digest = env.convert_byte_array(&j_message_digest).expect("fail to get java bytes");
+
+    let rt = get_runtime();
+    let result = rt.block_on(async move {
+        let saved_share = parse_share(share_bytes, MPC_SCOPE_ED25519EDDSA)?;
+        ed25519_sign(ws_url, &saved_share, message_digest).await
+    });
+
+    return if let Ok(sig) = result {
+        fill_j_obj_arr(env, sig, None)
+    } else {
+        let err = result.err().unwrap();
+        fill_j_obj_arr(env, vec![], Some(err))
+    };
+}
+
+#[no_mangle]
+pub extern "system" fn Java_twoparty_mpc_NativeMpc_ed25519Rotate<'local>
+(mut env: JNIEnv<'local>, _class: JClass, j_ws_url: JString, j_share: JByteArray) -> JObjectArray<'local> {
+    let ws_url: String = env
+        .get_string(&j_ws_url)
+        .expect("Couldn't get java string!")
+        .into();
+    let share_bytes = env.convert_byte_array(&j_share).expect("fail to get java bytes");
+
+    let rt = get_runtime();
+    let result = rt.block_on(async move {
+        let saved_share = parse_share(share_bytes, MPC_SCOPE_ED25519EDDSA)?;
+        ed25519_rotate(ws_url, &saved_share).await
+    });
+
+    return if let Ok(new_share) = result {
+        let new_share_bytes = serde_json::to_vec(&new_share).unwrap();
+        fill_j_obj_arr(env, new_share_bytes, None)
+    } else {
+        let err = result.err().unwrap();
+        fill_j_obj_arr(env, vec![], Some(err))
+    };
+}
 
 fn fill_j_obj_arr(mut env: JNIEnv, data: Vec<u8>, option_err: Option<String>) -> JObjectArray {
     let mut array_length = 1;
@@ -143,10 +219,14 @@ fn get_runtime() -> Runtime {
     rt
 }
 
-fn parse_share(share_bytes: Vec<u8>) -> Result<SavedShare, String> {
+fn parse_share(share_bytes: Vec<u8>, expected_scope: u8) -> Result<SavedShare, String> {
     let saved_share_result = serde_json::from_slice(&share_bytes);
     if saved_share_result.is_err() {
         return Err(format!("fail to parse share:{}", saved_share_result.err().unwrap().to_string()));
     }
-    Ok(saved_share_result.unwrap())
+    let saved_share: SavedShare = saved_share_result.unwrap();
+    if &saved_share.scope != &expected_scope {
+        return Err("share scope not match".to_string());
+    }
+    Ok(saved_share)
 }
