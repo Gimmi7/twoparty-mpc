@@ -67,7 +67,7 @@ pub struct Secp256k1Sig {
     pub v: u8,
 }
 
-pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_digest: Vec<u8>) -> Result<Vec<u8>, String> {
+pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_digest: Vec<u8>) -> Result<Secp256k1Sig, String> {
     let inner_share = parse_party1_share(&saved_share.share_detail)?;
     let identity_id = &saved_share.identity_id;
     let sync_client = SyncClient::connect_server(identity_id.to_string(), url, 10).await?;
@@ -121,7 +121,7 @@ pub async fn secp256k1_sign(url: String, saved_share: &SavedShare, message_diges
         s: sig.s.to_hex(),
         v: sig.v,
     };
-    Ok(serde_json::to_vec(&secp256k1_sig).unwrap())
+    Ok(secp256k1_sig)
 }
 
 pub async fn secp256k1_rotate(url: String, old_share: &SavedShare) -> Result<SavedShare, String> {
@@ -176,6 +176,10 @@ pub async fn secp256k1_rotate(url: String, old_share: &SavedShare) -> Result<Sav
         uncompressed_pub: share11.public.pub_key.to_bytes(false).to_vec(),
         share_detail: new_inner_bytes,
     };
+
+    if &old_inner_share.public.pub_key != &share11.public.pub_key {
+        panic!("public key not consistent")
+    }
 
     Ok(new_saved_share)
 }

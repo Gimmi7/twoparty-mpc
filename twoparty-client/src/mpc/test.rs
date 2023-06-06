@@ -13,8 +13,7 @@ async fn test_secp256k1_ecdsa() {
 
     let message_digest = vec![1, 2, 3, 4];
     let sig = secp256k1_sign(url.to_string(), &saved_share, message_digest).await.unwrap();
-    let secp256k1_sig = serde_json::from_slice::<Secp256k1Sig>(&sig).unwrap();
-    println!("{:?}", secp256k1_sig);
+    println!("{:?}", sig);
 
     let new_share = secp256k1_rotate(url.to_string(), &saved_share).await.unwrap();
     println!("rotate success, new_share_id={}", new_share.share_id);

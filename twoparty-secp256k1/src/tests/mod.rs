@@ -46,7 +46,7 @@ pub fn full_keygen() -> (Party1Share, Party2Share) {
         println!("{}", party1_result2.err().unwrap());
         panic!("");
     }
-    let (party1_keygen_msg2, party1_share)=party1_result2.unwrap();
+    let (party1_keygen_msg2, party1_share) = party1_result2.unwrap();
 
     // party2 step2
     let party2_result2 = keygen::party2::party2_step2(
@@ -59,6 +59,10 @@ pub fn full_keygen() -> (Party1Share, Party2Share) {
         panic!("");
     }
     let party2_share = party2_result2.unwrap();
+    if &party1_share.public.pub_key != &party2_share.public.pub_key {
+        panic!("public key not consistent")
+    }
+
 
     (party1_share, party2_share)
 }
@@ -157,6 +161,10 @@ fn rotate_share(share1: Party1Share, share2: Party2Share) -> (Party1Share, Party
         panic!("")
     }
     let share11 = party1_result3.unwrap();
+    if (&share11.public.pub_key != &share22.public.pub_key) && (&share11.public.pub_key != &share2.public.pub_key) {
+        panic!("public key not consistent");
+    }
+
     (share11, share22)
 }
 
