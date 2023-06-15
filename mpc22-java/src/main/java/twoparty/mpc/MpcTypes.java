@@ -12,7 +12,7 @@ public class MpcTypes {
         public int scope;
         public int party;
         // secp256k1 uncompressed_pub's type is [u8;65], explicitly [4,x,y]
-        // ed25519 uncompressed_pub's type is [u8;32], explicitly [x]
+        // ed25519 uncompressed_pub's type is [u8;32], explicitly [y] with the x is negative at last bit
         public byte[] uncompressed_pub;
         public byte[] share_detail;
     }
